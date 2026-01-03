@@ -20,6 +20,12 @@ using namespace std;
 #define boxXoffset (width - boxSide) / 2.0f
 #define boxYoffset (height - boxSide) / 2.0f
 #define barThickness 10.0f
+// menu items will be horizantal bars
+#define menuItemWidth 400.0f
+#define menuItemHeight 50.0f
+#define menuItemSpacing 50.0f
+#define menuItemXOffset 200.0f
+#define menuFirstItemYOffset 100.0f
 // area definitions
 // area1
 #define area1X1 boxXoffset + barThickness
@@ -101,10 +107,16 @@ int main() {
   std::unordered_set<int> permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   std::unordered_set<int> boxesWithX = {};
   std::unordered_set<int> boxesWithO = {};
-
+  vector<sf::FloatRect> menuItemsBounds = {};
+  bool menuItemsBoundDefined =
+      false; // I need to add the bounds to menuItemsBounds only once
   sf::Font xoFont("../assets/HackNerdFontMono-Bold.ttf");
   int turn = 0;
   int boxNumber = 0;
+  int mode = 0; // 0 : menu 1 : NormalTicTacToe  2 : InfiniteTicTacToe 3:
+                // VsComputer 4:Online // should've went with enum class
+  bool transition = false; // to reset event loop
+
   auto drawBar = [&](sf::Vector2f size, sf::Vector2f pos) {
     sf::RectangleShape bar(size);
     bar.setFillColor(sf::Color::Black);
@@ -182,40 +194,51 @@ int main() {
     }
     return 0;
   };
+  auto drawCenteredText = [&](sf::Text Text,
+                              sf::FloatRect encapsulatingBodyBounds) {
+    sf::FloatRect textBounds = Text.getGlobalBounds();
+    Text.setOrigin({textBounds.size.x / 2.0f, textBounds.size.y / 2.0f});
+    Text.setPosition({encapsulatingBodyBounds.position.x +
+                          encapsulatingBodyBounds.size.x / 2.0f,
+                      encapsulatingBodyBounds.position.y +
+                          encapsulatingBodyBounds.size.y / 2.0f});
+    window.draw(Text);
+  };
   auto OnMouseClicked = [&](const sf::Event::MouseButtonPressed) {
     // draw "X" or "O" and  add the boxNumber to boxesWith X or O
-    if (boxNumber == 0 | permittedBoxes.count(boxNumber) == 0)
-      return;
-
-    if (turn % 2 == 0) {
-      // X
-      boxesWithX.insert(boxNumber);
-    } else {
-      boxesWithO.insert(boxNumber);
+    if (mode == 0) {
+      sf::Vector2i localPosition = sf::Mouse::getPosition(window);
+      for (int i = 0; i < menuItemsBounds.size(); i++) {
+        auto bounds = menuItemsBounds[i];
+        if (localPosition.x > bounds.position.x &&
+            localPosition.x < bounds.position.x + bounds.size.x &&
+            localPosition.y > bounds.position.y &&
+            localPosition.y < bounds.position.y + bounds.size.y) {
+          mode = i + 1;
+          permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+          boxesWithO = {};
+          boxesWithX = {};
+          turn = 0;
+          transition = true;
+        }
+      }
     }
-    turn++;
+    if (mode == 1 && !transition) {
+      if (boxNumber == 0 | permittedBoxes.count(boxNumber) == 0)
+        return;
 
-    permittedBoxes.erase(boxNumber);
+      if (turn % 2 == 0) {
+        // X
+        boxesWithX.insert(boxNumber);
+      } else {
+        boxesWithO.insert(boxNumber);
+      }
+      turn++;
+
+      permittedBoxes.erase(boxNumber);
+    }
   };
-  // run the program as long as the window is open
-  while (window.isOpen()) {
-    window.handleEvents([&](const sf::Event::Closed &) { window.close(); },
-                        [&](const sf::Event::KeyPressed &key) {
-                          if (key.scancode == sf::Keyboard::Scancode::Escape)
-                            window.close();
-                          if (key.scancode == sf::Keyboard::Scancode::R) {
-                            permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-                            boxesWithO = {};
-                            boxesWithX = {};
-                            turn = 0;
-                          }
-                        },
-                        onMouseMoved, OnMouseClicked);
-    // clear the window with black color
-    window.clear(sf::Color::White);
-
-    // draw everything here...
-    // tic tac toe contour
+  auto drawNormalTicTacToe = [&]() {
     sf::Text Xmark(xoFont);
     sf::Text Omark(xoFont);
     sf::Text winMsg(xoFont);
@@ -226,6 +249,7 @@ int main() {
     Omark.setFillColor(sf::Color::Red);
     Xmark.setCharacterSize(24);
     Omark.setCharacterSize(24);
+    // tic  toe contour
     sf::RectangleShape countour({boxSide, boxSide});
     countour.setPosition({boxXoffset, boxYoffset});
     countour.setOutlineColor(sf::Color::Black);
@@ -277,6 +301,85 @@ int main() {
         window.draw(winMsg);
       }
     }
+  };
+  auto drawMenu = [&]() {
+    for (int i = 0; i < 4; i++) {
+      sf::RectangleShape MenuItem({menuItemWidth, menuItemHeight});
+      MenuItem.setPosition(
+          {menuItemXOffset,
+           menuFirstItemYOffset + i * (menuItemHeight + menuItemSpacing)});
+      MenuItem.setOutlineColor(sf::Color::Black);
+      MenuItem.setOutlineThickness(10.0f);
+      window.draw(MenuItem);
+      sf::Text menuItemTexts(xoFont);
+      sf::FloatRect itemBounds = MenuItem.getGlobalBounds();
+      if (menuItemsBoundDefined == false) {
+        menuItemsBounds.push_back(itemBounds);
+      }
+      menuItemTexts.setCharacterSize(24);
+      menuItemTexts.setFillColor(sf::Color::Black);
+
+      switch (i) {
+      case 0: {
+        menuItemTexts.setString("Normal Tic Tac Toe");
+        drawCenteredText(menuItemTexts, itemBounds);
+        break;
+      }
+      case 1: {
+        menuItemTexts.setString("Infinite Tic Tac Toe");
+        drawCenteredText(menuItemTexts, itemBounds);
+        break;
+      }
+      case 2: {
+        menuItemTexts.setString("VsComputer");
+        drawCenteredText(menuItemTexts, itemBounds);
+        break;
+      }
+      case 3: {
+        menuItemTexts.setString("Online");
+        drawCenteredText(menuItemTexts, itemBounds);
+        break;
+      }
+      }
+    }
+    menuItemsBoundDefined = true;
+  };
+  while (window.isOpen()) {
+    if (transition) {
+      while (window.pollEvent()) {
+      }
+      transition = false;
+    }
+    if (!transition) {
+
+      window.handleEvents([&](const sf::Event::Closed &) { window.close(); },
+                          [&](const sf::Event::KeyPressed &key) {
+                            if (key.scancode == sf::Keyboard::Scancode::Escape)
+                              window.close();
+                            if (key.scancode == sf::Keyboard::Scancode::R) {
+                              permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+                              boxesWithO = {};
+                              boxesWithX = {};
+                              turn = 0;
+                            }
+                            if (key.scancode == sf::Keyboard::Scancode::M) {
+                              mode = 0; // return to menu
+                            }
+                          },
+                          onMouseMoved, OnMouseClicked);
+    }
+    // clear the window
+    window.clear(sf::Color::White);
+
+    if (mode == 0) {
+      drawMenu();
+    } else if (mode == 1) {
+      drawNormalTicTacToe();
+    } else {
+      // for now other modes are a white screen
+    }
+    // draw everything here...
+
     // end the current frame
     window.display();
   }
