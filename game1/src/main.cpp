@@ -6,6 +6,7 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/System/Clock.hpp>
+#include <SFML/System/String.hpp>
 #include <SFML/System/Time.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Window/Event.hpp>
@@ -15,6 +16,7 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <string>
 #include <vector>
 using namespace std;
 constexpr int WINDOW_WIDTH = 800;
@@ -223,10 +225,16 @@ Player checkForWinner(GameState &gameState) {
     if (gameState.Boxes[winConditions[i].a] == BoxState::X &&
         gameState.Boxes[winConditions[i].b] == BoxState::X &&
         gameState.Boxes[winConditions[i].c] == BoxState::X) {
+      if (gameState.score[0] + gameState.score[1] <
+          (gameState.roundsCounter + 1))
+        gameState.score[0]++;
       return Player::X;
     } else if (gameState.Boxes[winConditions[i].a] == BoxState::O &&
                gameState.Boxes[winConditions[i].b] == BoxState::O &&
                gameState.Boxes[winConditions[i].c] == BoxState::O) {
+      if (gameState.score[0] + gameState.score[1] <
+          (gameState.roundsCounter + 1))
+        gameState.score[1]++;
       return Player::O;
     }
   }
@@ -281,6 +289,16 @@ void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
       drawCenteredText(window, bounds, winMsg);
     }
   }
+  sf::FloatRect bounds = sf::FloatRect(
+      {0, WINDOW_HEIGHT - 8 * BAR_THICKNESS},
+      {WINDOW_WIDTH, 3 * BAR_THICKNESS}); // Bottom square for drawing text
+                                          // (score in this case)
+  sf::Text score(textFont);
+  score.setString("score (X vs O) -> " + std::to_string(gameState.score[0]) +
+                  " - " + std::to_string(gameState.score[1]));
+  score.setCharacterSize(24);
+  score.setFillColor(sf::Color::Black);
+  drawCenteredText(window, bounds, score);
 }
 
 int main() {
