@@ -3,6 +3,7 @@
 #include <SFML/Graphics/Font.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Time.hpp>
@@ -10,340 +11,327 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
+#include <SFML/Window/Window.hpp>
+#include <array>
+#include <cmath>
 #include <iostream>
-#include <unordered_set>
 #include <vector>
 using namespace std;
-#define width 800
-#define height 600
-#define boxSide 400.0f
-#define boxXoffset (width - boxSide) / 2.0f
-#define boxYoffset (height - boxSide) / 2.0f
-#define barThickness 10.0f
+constexpr int WINDOW_WIDTH = 800;
+constexpr int WINDOW_HEIGHT = 600;
+constexpr float BOX_SIDE = 400.0f;
+constexpr float BOX_X_OFFSET = (WINDOW_WIDTH - BOX_SIDE) / 2.0f;
+constexpr float BOX_Y_OFFSET = (WINDOW_HEIGHT - BOX_SIDE) / 2.0f;
+constexpr float BAR_THICKNESS = 10.0f;
 // menu items will be horizantal bars
-#define menuItemWidth 400.0f
-#define menuItemHeight 50.0f
-#define menuItemSpacing 50.0f
-#define menuItemXOffset 200.0f
-#define menuFirstItemYOffset 100.0f
-// area definitions
-// area1
-#define area1X1 boxXoffset + barThickness
-#define area1X2 boxXoffset + boxSide / 3.0f
-#define area1Y1 boxYoffset + barThickness
-#define area1Y2 boxYoffset + boxSide / 3.0f
-// area2
-#define area2X1 boxXoffset + boxSide / 3.0f + barThickness
-#define area2X2 boxXoffset + 2 * boxSide / 3.0f
-#define area2Y1 boxYoffset + barThickness
-#define area2Y2 boxYoffset + boxSide / 3.0f
-// area3
-#define area3X1 boxXoffset + 2 * boxSide / 3.0f + barThickness
-#define area3X2 boxXoffset + boxSide - barThickness
-#define area3Y1 boxYoffset + barThickness
-#define area3Y2 boxYoffset + boxSide / 3.0f
-// area4
-#define area4X1 boxXoffset + barThickness
-#define area4X2 boxXoffset + boxSide / 3.0f
-#define area4Y1 boxYoffset + boxSide / 3.0f + barThickness
-#define area4Y2 boxYoffset + 2 * boxSide / 3.0f
-// area5
-#define area5X1 boxXoffset + boxSide / 3.0f + barThickness
-#define area5X2 boxXoffset + 2 * boxSide / 3.0f
-#define area5Y1 boxYoffset + boxSide / 3.0f + barThickness
-#define area5Y2 boxYoffset + 2 * boxSide / 3.0f
+constexpr float menuItemWidth = 400.0f;
+constexpr float menuItemHeight = 50.0f;
+constexpr float menuItemSpacing = 50.0f;
+constexpr float menuItemXOffset = 200.0f;
+constexpr float menuFirstItemYOffset = 100.0f;
 
-// area6
-#define area6X1 boxXoffset + 2 * boxSide / 3.0f + barThickness
-#define area6X2 boxXoffset + boxSide - barThickness
-#define area6Y1 boxYoffset + boxSide / 3.0f + barThickness
-#define area6Y2 boxYoffset + 2 * boxSide / 3.0f
-
-// area7
-#define area7X1 boxXoffset + barThickness
-#define area7X2 boxXoffset + boxSide / 3.0f
-#define area7Y1 boxYoffset + 2 * boxSide / 3.0f + barThickness
-#define area7Y2 boxYoffset + boxSide - barThickness
-// area8
-#define area8X1 boxXoffset + boxSide / 3.0f + barThickness
-#define area8X2 boxXoffset + 2 * boxSide / 3.0f
-#define area8Y1 boxYoffset + 2 * boxSide / 3.0f + barThickness
-#define area8Y2 boxYoffset + boxSide - barThickness
-// area9
-#define area9X1 boxXoffset + 2 * boxSide / 3.0f + barThickness
-#define area9X2 boxXoffset + boxSide - barThickness
-#define area9Y1 boxYoffset + 2 * boxSide / 3.0f + barThickness
-#define area9Y2 boxYoffset + boxSide - barThickness
 struct Line {
   int a, b, c;
 };
-vector<Line> winConditions{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {1, 4, 7},
-                           {2, 5, 8}, {3, 6, 9}, {1, 5, 9}, {3, 5, 7}};
-struct Area {
-  float x1, x2, y1, y2;
-  int boxIdx;
+vector<Line> winConditions{{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {0, 3, 6},
+                           {1, 4, 7}, {2, 5, 8}, {0, 4, 8}, {2, 4, 6}};
+
+constexpr std::array<sf::FloatRect, 9> TTT_BOXES_BOUNDS = [] {
+  std::array<sf::FloatRect, 9> bounds = {};
+  for (int i = 0; i < 9; i++) {
+    int row = (i / 3), column = i % 3; // 4 -> row 1 column 1 we start from 0
+    bounds[i] = {{BOX_X_OFFSET + column * (BOX_SIDE / 3.0f),
+                  BOX_Y_OFFSET + row * (BOX_SIDE / 3.0f)},
+                 {BOX_SIDE / 3.0f, BOX_SIDE / 3.0f}};
+  }
+  return bounds;
+}();
+constexpr std::array<sf::FloatRect, 4> MENU_ITEMS_BOUNDS = [] {
+  std::array<sf::FloatRect, 4> bounds = {};
+  for (int i = 0; i < 4; i++) {
+    bounds[i] = {{menuItemXOffset, menuFirstItemYOffset +
+                                       i * (menuItemSpacing + menuItemHeight)},
+                 {menuItemWidth, menuItemHeight}};
+  }
+  return bounds;
+}();
+
+enum class BoxState { EMPTY, X, O };
+enum class Player { X, O, NONE };
+enum class Mode {
+  MENU,
+  NORMAL_TTT,
+  INFINITE_TTT, // upcoming
+  VS_COMPUTER,  // upcoming
+  ONLINE        // upcoming
+}; // TTT means TicTacToe;
+constexpr std::array<Mode, 4> MENU_MODES = {
+    Mode::NORMAL_TTT, Mode::INFINITE_TTT, Mode::VS_COMPUTER, Mode::ONLINE};
+struct AppState {
+  Mode mode = Mode::MENU;
 };
-vector<Area> Areas = {
-    {area1X1, area1X2, area1Y1, area1X1, 1},
-    {area2X1, area2X2, area2Y1, area2Y2, 2},
-    {area3X1, area3X2, area3Y1, area3Y2, 3},
-    {area4X1, area4X2, area4Y1, area4Y2, 4},
-    {area5X1, area5X2, area5Y1, area5Y2, 5},
-    {area6X1, area6X2, area6Y1, area6Y2, 6},
-    {area7X1, area7X2, area7Y1, area7Y2, 7},
-    {area8X1, area8X2, area8Y1, area8Y2, 8},
-    {area9X1, area9X2, area9Y1, area9Y2, 9},
+
+struct GameState {
+  int roundsCounter = 0;
+  int numberOfX = 0;
+  int numberOfO = 0;
+  Player currentPlayer = Player::X;
+  Player roundWinner = Player::NONE;
+  std::array<int, 2> score = {}; // zero-initialized
+  std::array<BoxState, 9> Boxes = {};
+
+  void reset_round() {
+    if (roundsCounter % 2 == 0)
+      currentPlayer = Player::X;
+    else
+      currentPlayer = Player::O;
+    Boxes.fill(BoxState::EMPTY);
+    numberOfX = 0;
+    numberOfO = 0;
+    roundWinner = Player::NONE;
+  }
+  void
+  reset_score() { // will call this when i change the app state or with when the
+                  // players want to reset the score via (keybord or mouse)
+    score.fill(0);
+    currentPlayer = Player::X;
+    Boxes.fill(BoxState::EMPTY);
+    roundsCounter = 0;
+    numberOfO = 0;
+    numberOfX = 0;
+    roundWinner = Player::NONE;
+  }
 };
+void drawTTTHighlights(sf::RenderWindow &window, sf::Color &color,
+                       sf::Vector2i mousePos, GameState &gameState) {
+  for (int i = 0; i < 9; i++) {
+    if (mousePos.x > TTT_BOXES_BOUNDS[i].position.x &&
+        mousePos.x <
+            TTT_BOXES_BOUNDS[i].position.x + TTT_BOXES_BOUNDS[i].size.x &&
+        mousePos.y > TTT_BOXES_BOUNDS[i].position.y &&
+        mousePos.y <
+            TTT_BOXES_BOUNDS[i].position.y + TTT_BOXES_BOUNDS[i].size.y &&
+        gameState.Boxes[i] == BoxState::EMPTY &&
+        gameState.roundWinner == Player::NONE) {
+
+      sf::RectangleShape highlighter(TTT_BOXES_BOUNDS[i].size);
+      highlighter.setPosition(TTT_BOXES_BOUNDS[i].position);
+      highlighter.setFillColor(color);
+      window.draw(highlighter);
+    }
+  }
+}
+void drawMenuHighlights(sf::RenderWindow &window, sf::Color &color,
+                        sf::Vector2i &mousePos) {
+  for (int i = 0; i < 4; i++) {
+    if (mousePos.x > MENU_ITEMS_BOUNDS[i].position.x &&
+        mousePos.x <
+            MENU_ITEMS_BOUNDS[i].position.x + MENU_ITEMS_BOUNDS[i].size.x &&
+        mousePos.y > MENU_ITEMS_BOUNDS[i].position.y &&
+        mousePos.y <
+            MENU_ITEMS_BOUNDS[i].position.y + MENU_ITEMS_BOUNDS[i].size.y) {
+
+      sf::RectangleShape highlighter(MENU_ITEMS_BOUNDS[i].size);
+      highlighter.setPosition(MENU_ITEMS_BOUNDS[i].position);
+      highlighter.setFillColor(color);
+      window.draw(highlighter);
+    }
+  }
+}
+void drawCenteredText(sf::RenderWindow &window, sf::FloatRect &bounds,
+                      sf::Text text) {
+  sf::FloatRect textBounds = text.getGlobalBounds();
+  text.setOrigin({textBounds.size.x / 2.0f, textBounds.size.y / 2.0f});
+  text.setPosition({bounds.position.x + bounds.size.x / 2.0f,
+                    bounds.position.y + bounds.size.y / 2.0f});
+  window.draw(text);
+}
+void renderMenu(sf::RenderWindow &window, sf::Font &textFont, sf::Color &color,
+                sf::Vector2i &mousePos) {
+  for (int i = 0; i < 4; i++) {
+    sf::RectangleShape MenuItem(
+        {MENU_ITEMS_BOUNDS[i].size.x, MENU_ITEMS_BOUNDS[i].size.y});
+    MenuItem.setPosition(
+        {MENU_ITEMS_BOUNDS[i].position.x, MENU_ITEMS_BOUNDS[i].position.y});
+    MenuItem.setOutlineColor(sf::Color::Black);
+    MenuItem.setOutlineThickness(10.0f);
+    window.draw(MenuItem);
+    drawMenuHighlights(window, color, mousePos);
+    sf::Text menuItemTexts(textFont);
+    menuItemTexts.setCharacterSize(24);
+    menuItemTexts.setFillColor(sf::Color::Black);
+    sf::FloatRect bounds = MENU_ITEMS_BOUNDS[i];
+    switch (i) {
+    case 0: {
+      menuItemTexts.setString("Normal Tic Tac Toe");
+      drawCenteredText(window, bounds, menuItemTexts);
+      break;
+    }
+    case 1: {
+      menuItemTexts.setString("Infinite Tic Tac Toe");
+      drawCenteredText(window, bounds, menuItemTexts);
+      break;
+    }
+    case 2: {
+      menuItemTexts.setString("VsComputer");
+      drawCenteredText(window, bounds, menuItemTexts);
+      break;
+    }
+    case 3: {
+      menuItemTexts.setString("Online");
+      drawCenteredText(window, bounds, menuItemTexts);
+      break;
+    }
+    }
+  }
+}
+
+void drawBar(sf::RenderWindow &window, sf::Vector2f size, sf::Vector2f pos) {
+  sf::RectangleShape bar(size);
+  bar.setFillColor(sf::Color::Black);
+  bar.setPosition(pos);
+  window.draw(bar);
+}
+void drawXO(sf::RenderWindow &window, sf::Font &textFont,
+            GameState &gameState) {
+  sf::Text Xmark(textFont);
+  sf::Text Omark(textFont);
+  Xmark.setString("X");
+  Xmark.setFillColor(sf::Color::Blue);
+  Omark.setString("O");
+  Omark.setFillColor(sf::Color::Red);
+  Xmark.setCharacterSize(24);
+  Omark.setCharacterSize(24);
+  for (int i = 0; i < 9; i++) {
+    if (gameState.Boxes[i] == BoxState::X) {
+      sf::FloatRect bounds = TTT_BOXES_BOUNDS[i];
+      drawCenteredText(window, bounds, Xmark);
+    } else if (gameState.Boxes[i] == BoxState::O) {
+      sf::FloatRect bounds = TTT_BOXES_BOUNDS[i];
+      drawCenteredText(window, bounds, Omark);
+    }
+  }
+  // this code helps the players know whose turn it is
+  if (gameState.currentPlayer == Player::X) {
+    window.draw(Xmark);
+  } else if (gameState.currentPlayer == Player::O) {
+    window.draw(Omark);
+  }
+}
+Player checkForWinner(GameState &gameState) {
+  for (int i = 0; i < winConditions.size(); i++) {
+    if (gameState.Boxes[winConditions[i].a] == BoxState::X &&
+        gameState.Boxes[winConditions[i].b] == BoxState::X &&
+        gameState.Boxes[winConditions[i].c] == BoxState::X) {
+      return Player::X;
+    } else if (gameState.Boxes[winConditions[i].a] == BoxState::O &&
+               gameState.Boxes[winConditions[i].b] == BoxState::O &&
+               gameState.Boxes[winConditions[i].c] == BoxState::O) {
+      return Player::O;
+    }
+  }
+  return Player::NONE;
+}
+void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
+                     GameState &gameState, sf::Vector2i &mousePos,
+                     sf::Color &color) {
+  sf::Text winMsg(textFont);
+  // tic  toe contour
+  sf::RectangleShape countour({BOX_SIDE, BOX_SIDE});
+  countour.setPosition({BOX_X_OFFSET, BOX_Y_OFFSET});
+  countour.setOutlineColor(sf::Color::Black);
+  countour.setOutlineThickness(BAR_THICKNESS);
+  // tic tac toe bars
+  // window.draw(...);
+  window.draw(countour);
+  drawBar(
+      window, {BAR_THICKNESS, BOX_SIDE},
+      {-BAR_THICKNESS / 2.0f + BOX_X_OFFSET + BOX_SIDE / 3.0f, BOX_Y_OFFSET});
+  drawBar(window, {BAR_THICKNESS, BOX_SIDE},
+          {-BAR_THICKNESS / 2.0f + BOX_X_OFFSET + 2 * BOX_SIDE / 3.0f,
+           BOX_Y_OFFSET});
+  drawBar(
+      window, {BOX_SIDE, BAR_THICKNESS},
+      {BOX_X_OFFSET, -BAR_THICKNESS / 2.0f + BOX_Y_OFFSET + BOX_SIDE / 3.0f});
+  drawBar(window, {BOX_SIDE, BAR_THICKNESS},
+          {BOX_X_OFFSET,
+           -BAR_THICKNESS / 2.0f + BOX_Y_OFFSET + 2 * BOX_SIDE / 3.0f});
+  drawXO(window, textFont, gameState); // On the boxes
+  drawTTTHighlights(window, color, mousePos, gameState);
+  if (gameState.numberOfX >= 3 | gameState.numberOfO >= 3) {
+    // check for win
+    if (checkForWinner(gameState) == Player::X) {
+      gameState.roundWinner = Player::X;
+      // is with a flag that controll the set)
+      winMsg.setString("X wins press (r) to replay");
+      winMsg.setFillColor(sf::Color::Blue);
+      winMsg.setCharacterSize(24);
+      sf::FloatRect bounds =
+          sf::FloatRect({0, 0}, {WINDOW_WIDTH, 3 * BAR_THICKNESS});
+      drawCenteredText(window, bounds, winMsg);
+
+    } else if (checkForWinner(gameState) == Player::O) {
+      gameState.roundWinner = Player::NONE;
+
+      winMsg.setString("O wins press (r) to replay");
+      winMsg.setFillColor(sf::Color::Red);
+      winMsg.setCharacterSize(24);
+      sf::FloatRect bounds =
+          sf::FloatRect({0, 0}, {WINDOW_WIDTH, 3 * BAR_THICKNESS});
+      drawCenteredText(window, bounds, winMsg);
+    }
+  }
+}
 
 int main() {
-  // seeing areas limits:
-  // for (const auto &area : Areas) {
-  //   cout << "Area N°" << area.boxIdx << ": ( x1=" << area.x1
-  //        << ",x2=" << area.x2 << ",y1=" << area.y1 << ",y2=" << area.y2 <<
-  //        endl;
-  // }
-  // create the window
-  sf::RenderWindow window(sf::VideoMode({width, height}), "My window");
-  std::unordered_set<int> permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-  std::unordered_set<int> boxesWithX = {};
-  std::unordered_set<int> boxesWithO = {};
-  vector<sf::FloatRect> menuItemsBounds = {};
-  bool menuItemsBoundDefined =
-      false; // I need to add the bounds to menuItemsBounds only once
+  sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}),
+                          "TicTacToe");
+
   sf::Font xoFont("../assets/HackNerdFontMono-Bold.ttf");
-  int turn = 0;
-  int boxNumber = 0;
-  int mode = 0; // 0 : menu 1 : NormalTicTacToe  2 : InfiniteTicTacToe 3:
-                // VsComputer 4:Online // should've went with enum class
   bool transition = false; // to reset event loop
+  AppState appState;
+  GameState gameState;
 
-  auto drawBar = [&](sf::Vector2f size, sf::Vector2f pos) {
-    sf::RectangleShape bar(size);
-    bar.setFillColor(sf::Color::Black);
-    bar.setPosition(pos);
-    window.draw(bar);
-  };
-
-  auto drawBoxHighlight = [&](int boxNumber) {
-    if (boxNumber == 0)
-      return;
-
-    sf::RectangleShape highlighter({boxSide / 3 - 5.0f, boxSide / 3 - 5.0f});
-    highlighter.setFillColor(sf::Color::Cyan);
-    highlighter.setPosition({boxXoffset + ((boxNumber - 1) % 3) * boxSide / 3 +
-                                 ((boxNumber - 1) % 3) * 5.0f / 2,
-                             boxYoffset +
-                                 ((boxNumber - 1) / 3) * boxSide / 3.0f +
-                                 ((boxNumber - 1) / 3) * 5.0f / 2});
-
-    window.draw(highlighter);
-  };
-  auto onMouseMoved = [&](const sf::Event::MouseMoved &) {
-    sf::Vector2i localPosition = sf::Mouse::getPosition(window);
-    float x = localPosition.x;
-    float y = localPosition.y;
-    // cout << "(" << x << "," << y << ")" << endl;
-    boxNumber = 0;
-    for (const auto &area : Areas) {
-
-      if (x > area.x1 && x < area.x2 && y > area.y1 && y < area.y2 &&
-          permittedBoxes.count(area.boxIdx) == 1) {
-        boxNumber = area.boxIdx;
-        break;
-      }
-    }
-
-    // std::cout << boxNumber << endl;
-  };
-  auto drawXO = [&]() {
-    sf::Text Xmark(xoFont);
-    sf::Text Omark(xoFont);
-    // X
-    Xmark.setString("X");
-    Xmark.setFillColor(sf::Color::Blue);
-    Omark.setString("O");
-    Omark.setFillColor(sf::Color::Red);
-    Xmark.setCharacterSize(24);
-    Omark.setCharacterSize(24);
-
-    for (int i = 1; i < 10; i++) {
-      if (boxesWithX.count(i) == 1) {
-        Xmark.setPosition({Areas[i - 1].x1 + 5 * barThickness,
-                           Areas[i - 1].y1 + 5 * barThickness});
-        window.draw(Xmark);
-      } else if (boxesWithO.count(i) == 1) {
-        Omark.setPosition({Areas[i - 1].x1 + 5 * barThickness,
-                           Areas[i - 1].y1 + 5 * barThickness});
-        window.draw(Omark);
-      }
-    }
-  };
-  auto checkForWinner = [&]() {
-    // 0 : keep playing , 1 : X wins  ,  2 : O wins
-    for (const auto &winCondition : winConditions) {
-      if (boxesWithX.count(winCondition.a) + boxesWithX.count(winCondition.b) +
-              boxesWithX.count(winCondition.c) ==
-          3) {
-        return 1;
-      } else if (boxesWithO.count(winCondition.a) +
-                     boxesWithO.count(winCondition.b) +
-                     boxesWithO.count(winCondition.c) ==
-                 3) {
-        return 2;
-      }
-    }
-    return 0;
-  };
-  auto drawCenteredText = [&](sf::Text Text,
-                              sf::FloatRect encapsulatingBodyBounds) {
-    sf::FloatRect textBounds = Text.getGlobalBounds();
-    Text.setOrigin({textBounds.size.x / 2.0f, textBounds.size.y / 2.0f});
-    Text.setPosition({encapsulatingBodyBounds.position.x +
-                          encapsulatingBodyBounds.size.x / 2.0f,
-                      encapsulatingBodyBounds.position.y +
-                          encapsulatingBodyBounds.size.y / 2.0f});
-    window.draw(Text);
-  };
   auto OnMouseClicked = [&](const sf::Event::MouseButtonPressed) {
     // draw "X" or "O" and  add the boxNumber to boxesWith X or O
-    if (mode == 0) {
-      sf::Vector2i localPosition = sf::Mouse::getPosition(window);
-      for (int i = 0; i < menuItemsBounds.size(); i++) {
-        auto bounds = menuItemsBounds[i];
+    sf::Vector2i localPosition = sf::Mouse::getPosition(window);
+    if (appState.mode == Mode::MENU) {
+      for (int i = 0; i < MENU_MODES.size(); i++) {
+        auto bounds = MENU_ITEMS_BOUNDS[i];
         if (localPosition.x > bounds.position.x &&
             localPosition.x < bounds.position.x + bounds.size.x &&
             localPosition.y > bounds.position.y &&
             localPosition.y < bounds.position.y + bounds.size.y) {
-          mode = i + 1;
-          permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-          boxesWithO = {};
-          boxesWithX = {};
-          turn = 0;
+          appState.mode = MENU_MODES[i];
+          gameState.reset_score();
           transition = true;
         }
       }
     }
-    if (mode == 1 && !transition) {
-      if (boxNumber == 0 | permittedBoxes.count(boxNumber) == 0)
-        return;
-
-      if (turn % 2 == 0) {
-        // X
-        boxesWithX.insert(boxNumber);
-      } else {
-        boxesWithO.insert(boxNumber);
-      }
-      turn++;
-
-      permittedBoxes.erase(boxNumber);
-    }
-  };
-  auto drawNormalTicTacToe = [&]() {
-    sf::Text Xmark(xoFont);
-    sf::Text Omark(xoFont);
-    sf::Text winMsg(xoFont);
-    // X
-    Xmark.setString("X");
-    Xmark.setFillColor(sf::Color::Blue);
-    Omark.setString("O");
-    Omark.setFillColor(sf::Color::Red);
-    Xmark.setCharacterSize(24);
-    Omark.setCharacterSize(24);
-    // tic  toe contour
-    sf::RectangleShape countour({boxSide, boxSide});
-    countour.setPosition({boxXoffset, boxYoffset});
-    countour.setOutlineColor(sf::Color::Black);
-    countour.setOutlineThickness(barThickness);
-    // tic tac toe bars
-    // window.draw(...);
-    window.draw(countour);
-    drawBar({barThickness, boxSide},
-            {-barThickness / 2.0f + boxXoffset + boxSide / 3.0f, boxYoffset});
-    drawBar(
-        {barThickness, boxSide},
-        {-barThickness / 2.0f + boxXoffset + 2 * boxSide / 3.0f, boxYoffset});
-    drawBar({boxSide, barThickness},
-            {boxXoffset, -barThickness / 2.0f + boxYoffset + boxSide / 3.0f});
-    drawBar(
-        {boxSide, barThickness},
-        {boxXoffset, -barThickness / 2.0f + boxYoffset + 2 * boxSide / 3.0f});
-    // highlighter
-    drawBoxHighlight(boxNumber);
-    drawXO(); // On the boxes
-
-    // this code helps the players know whose turn it is
-    if (turn % 2 == 0) {
-      window.draw(Xmark);
-    } else {
-      window.draw(Omark);
-    }
-    if (boxesWithX.size() >= 3 | boxesWithO.size() >= 3) {
-      // check for win
-      if (checkForWinner() == 1) {
-        permittedBoxes = {}; // this should end the game (a better way to do it
-                             // is with a flag that controll the set)
-        winMsg.setString("X wins press (r) to replay");
-        winMsg.setFillColor(sf::Color::Blue);
-        winMsg.setCharacterSize(24);
-        sf::FloatRect textBounds = winMsg.getGlobalBounds();
-        winMsg.setOrigin({textBounds.size.x / 2.0f, textBounds.size.y / 2.0f});
-        winMsg.setPosition({width / 2.0f, 2 * barThickness});
-        window.draw(winMsg);
-      } else if (checkForWinner() == 2) {
-        permittedBoxes = {}; // this should end the game (a better way to do it
-                             // is with a flag that controll the set)
-        winMsg.setString("O wins press (r) to replay");
-        winMsg.setFillColor(sf::Color::Red);
-        winMsg.setCharacterSize(24);
-        sf::FloatRect textBounds = winMsg.getGlobalBounds();
-        winMsg.setOrigin({textBounds.size.x / 2.0f, textBounds.size.y / 2.0f});
-        winMsg.setPosition({width / 2.0f, 2 * barThickness});
-        window.draw(winMsg);
+    if (appState.mode == Mode::NORMAL_TTT && !transition) {
+      for (int i = 0; i < 9; i++) {
+        auto bounds = TTT_BOXES_BOUNDS[i];
+        if (localPosition.x > bounds.position.x &&
+            localPosition.x < bounds.position.x + bounds.size.x &&
+            localPosition.y > bounds.position.y &&
+            localPosition.y < bounds.position.y + bounds.size.y &&
+            gameState.Boxes[i] == BoxState::EMPTY &&
+            gameState.roundWinner == Player::NONE) {
+          if (gameState.currentPlayer == Player::X) {
+            gameState.Boxes[i] = BoxState::X;
+            gameState.numberOfX++;
+            gameState.currentPlayer = Player::O;
+          } else {
+            gameState.Boxes[i] = BoxState::O;
+            gameState.numberOfO++;
+            gameState.currentPlayer = Player::X;
+          }
+        }
       }
     }
   };
-  auto drawMenu = [&]() {
-    for (int i = 0; i < 4; i++) {
-      sf::RectangleShape MenuItem({menuItemWidth, menuItemHeight});
-      MenuItem.setPosition(
-          {menuItemXOffset,
-           menuFirstItemYOffset + i * (menuItemHeight + menuItemSpacing)});
-      MenuItem.setOutlineColor(sf::Color::Black);
-      MenuItem.setOutlineThickness(10.0f);
-      window.draw(MenuItem);
-      sf::Text menuItemTexts(xoFont);
-      sf::FloatRect itemBounds = MenuItem.getGlobalBounds();
-      if (menuItemsBoundDefined == false) {
-        menuItemsBounds.push_back(itemBounds);
-      }
-      menuItemTexts.setCharacterSize(24);
-      menuItemTexts.setFillColor(sf::Color::Black);
-
-      switch (i) {
-      case 0: {
-        menuItemTexts.setString("Normal Tic Tac Toe");
-        drawCenteredText(menuItemTexts, itemBounds);
-        break;
-      }
-      case 1: {
-        menuItemTexts.setString("Infinite Tic Tac Toe");
-        drawCenteredText(menuItemTexts, itemBounds);
-        break;
-      }
-      case 2: {
-        menuItemTexts.setString("VsComputer");
-        drawCenteredText(menuItemTexts, itemBounds);
-        break;
-      }
-      case 3: {
-        menuItemTexts.setString("Online");
-        drawCenteredText(menuItemTexts, itemBounds);
-        break;
-      }
-      }
-    }
-    menuItemsBoundDefined = true;
-  };
+  sf::Color highlighterColor = sf::Color::Cyan;
+  highlighterColor.a = 50;
   while (window.isOpen()) {
     if (transition) {
       while (window.pollEvent()) {
@@ -357,29 +345,27 @@ int main() {
                             if (key.scancode == sf::Keyboard::Scancode::Escape)
                               window.close();
                             if (key.scancode == sf::Keyboard::Scancode::R) {
-                              permittedBoxes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
-                              boxesWithO = {};
-                              boxesWithX = {};
-                              turn = 0;
+                              gameState.roundsCounter++;
+                              gameState.reset_round();
                             }
                             if (key.scancode == sf::Keyboard::Scancode::M) {
-                              mode = 0; // return to menu
+                              appState.mode = Mode::MENU; // return to menu
                             }
                           },
-                          onMouseMoved, OnMouseClicked);
+                          OnMouseClicked);
     }
     // clear the window
     window.clear(sf::Color::White);
-
-    if (mode == 0) {
-      drawMenu();
-    } else if (mode == 1) {
-      drawNormalTicTacToe();
-    } else {
-      // for now other modes are a white screen
-    }
+    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     // draw everything here...
+    if (appState.mode == Mode::MENU) {
+      renderMenu(window, xoFont, highlighterColor, mousePos);
 
+    } else if (appState.mode == Mode::NORMAL_TTT) {
+      renderNormalTTT(window, xoFont, gameState, mousePos, highlighterColor);
+    } else {
+      gameState.reset_score();
+    }
     // end the current frame
     window.display();
   }
