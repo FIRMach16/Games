@@ -16,7 +16,9 @@
 #include <array>
 #include <cmath>
 #include <iostream>
+#include <queue>
 #include <string>
+#include <system_error>
 #include <vector>
 using namespace std;
 constexpr int WINDOW_WIDTH = 800;
@@ -77,10 +79,11 @@ struct GameState {
   int roundsCounter = 0;
   int numberOfX = 0;
   int numberOfO = 0;
-  Player currentPlayer = Player::X;
-  Player roundWinner = Player::NONE;
   std::array<int, 2> score = {}; // zero-initialized
   std::array<BoxState, 9> Boxes = {};
+  std::queue<int> order;
+  Player roundWinner = Player::NONE;
+  Player currentPlayer = Player::X;
 
   void reset_round() {
     if (roundsCounter % 2 == 0)
@@ -91,6 +94,9 @@ struct GameState {
     numberOfX = 0;
     numberOfO = 0;
     roundWinner = Player::NONE;
+    while (!order.empty()) {
+      order.pop();
+    }
   }
   void
   reset_score() { // will call this when i change the app state or with when the
@@ -102,6 +108,9 @@ struct GameState {
     numberOfO = 0;
     numberOfX = 0;
     roundWinner = Player::NONE;
+    while (!order.empty()) {
+      order.pop();
+    }
   }
 };
 void drawTTTHighlights(sf::RenderWindow &window, sf::Color &color,
@@ -240,16 +249,13 @@ Player checkForWinner(GameState &gameState) {
   }
   return Player::NONE;
 }
-void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
-                     GameState &gameState, sf::Vector2i &mousePos,
-                     sf::Color &color) {
-  sf::Text winMsg(textFont);
+void drawGrid(sf::RenderWindow &window, sf::Font &textFont,
+              GameState &gameState) {
   // tic  toe contour
   sf::RectangleShape countour({BOX_SIDE, BOX_SIDE});
   countour.setPosition({BOX_X_OFFSET, BOX_Y_OFFSET});
   countour.setOutlineColor(sf::Color::Black);
   countour.setOutlineThickness(BAR_THICKNESS);
-  // tic tac toe bars
   // window.draw(...);
   window.draw(countour);
   drawBar(
@@ -264,8 +270,11 @@ void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
   drawBar(window, {BOX_SIDE, BAR_THICKNESS},
           {BOX_X_OFFSET,
            -BAR_THICKNESS / 2.0f + BOX_Y_OFFSET + 2 * BOX_SIDE / 3.0f});
-  drawXO(window, textFont, gameState); // On the boxes
-  drawTTTHighlights(window, color, mousePos, gameState);
+}
+void checkAndDrawWinnerAndScore(sf::RenderWindow &window, sf::Font &textFont,
+                                GameState &gameState) {
+
+  sf::Text winMsg(textFont);
   if (gameState.numberOfX >= 3 | gameState.numberOfO >= 3) {
     // check for win
     if (checkForWinner(gameState) == Player::X) {
@@ -301,6 +310,22 @@ void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
   drawCenteredText(window, bounds, score);
 }
 
+void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
+                     GameState &gameState, sf::Vector2i &mousePos,
+                     sf::Color &color) {
+  drawGrid(window, textFont, gameState);
+  drawXO(window, textFont, gameState); // On the boxes
+  drawTTTHighlights(window, color, mousePos, gameState);
+  checkAndDrawWinnerAndScore(window, textFont, gameState);
+}
+void renderInfiniteTTT(sf::RenderWindow &window, sf::Font &textFont,
+                       GameState &gameState, sf::Vector2i &mousePos,
+                       sf::Color &color) {
+  drawGrid(window, textFont, gameState);
+  drawXO(window, textFont, gameState); // On the boxes
+  drawTTTHighlights(window, color, mousePos, gameState);
+  checkAndDrawWinnerAndScore(window, textFont, gameState);
+}
 int main() {
   sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}),
                           "TicTacToe");
@@ -325,8 +350,7 @@ int main() {
           transition = true;
         }
       }
-    }
-    if (appState.mode == Mode::NORMAL_TTT && !transition) {
+    } else if (appState.mode == Mode::NORMAL_TTT && !transition) {
       for (int i = 0; i < 9; i++) {
         auto bounds = TTT_BOXES_BOUNDS[i];
         if (localPosition.x > bounds.position.x &&
@@ -343,6 +367,41 @@ int main() {
             gameState.Boxes[i] = BoxState::O;
             gameState.numberOfO++;
             gameState.currentPlayer = Player::X;
+          }
+        }
+      }
+    } else if (appState.mode == Mode::INFINITE_TTT) {
+      int firstBoxInQueue;
+      for (int i = 0; i < 9; i++) {
+        auto bounds = TTT_BOXES_BOUNDS[i];
+        if (localPosition.x > bounds.position.x &&
+            localPosition.x < bounds.position.x + bounds.size.x &&
+            localPosition.y > bounds.position.y &&
+            localPosition.y < bounds.position.y + bounds.size.y &&
+            gameState.Boxes[i] == BoxState::EMPTY &&
+            gameState.roundWinner == Player::NONE) {
+          if (gameState.currentPlayer == Player::X) {
+            gameState.order.push(i);
+            gameState.Boxes[i] = BoxState::X;
+            gameState.numberOfX++;
+            gameState.currentPlayer = Player::O;
+            if (gameState.numberOfO == 3) {
+              firstBoxInQueue = gameState.order.front();
+              gameState.Boxes[firstBoxInQueue] = BoxState::EMPTY;
+              gameState.order.pop();
+              gameState.numberOfO--;
+            }
+          } else {
+            gameState.order.push(i);
+            gameState.Boxes[i] = BoxState::O;
+            gameState.numberOfO++;
+            gameState.currentPlayer = Player::X;
+            if (gameState.numberOfX == 3) {
+              firstBoxInQueue = gameState.order.front();
+              gameState.Boxes[firstBoxInQueue] = BoxState::EMPTY;
+              gameState.order.pop();
+              gameState.numberOfX--;
+            }
           }
         }
       }
@@ -381,6 +440,8 @@ int main() {
 
     } else if (appState.mode == Mode::NORMAL_TTT) {
       renderNormalTTT(window, xoFont, gameState, mousePos, highlighterColor);
+    } else if (appState.mode == Mode::INFINITE_TTT) {
+      renderInfiniteTTT(window, xoFont, gameState, mousePos, highlighterColor);
     } else {
       gameState.reset_score();
     }
