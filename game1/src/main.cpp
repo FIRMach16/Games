@@ -13,12 +13,13 @@
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/Window.hpp>
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <experimental/random>
 #include <iostream>
 #include <queue>
 #include <string>
-#include <system_error>
 #include <vector>
 using namespace std;
 constexpr int WINDOW_WIDTH = 800;
@@ -65,9 +66,9 @@ enum class Player { X, O, NONE };
 enum class Mode {
   MENU,
   NORMAL_TTT,
-  INFINITE_TTT, // upcoming
-  VS_COMPUTER,  // upcoming
-  ONLINE        // upcoming
+  INFINITE_TTT,
+  VS_COMPUTER, // upcoming
+  ONLINE       // upcoming
 }; // TTT means TicTacToe;
 constexpr std::array<Mode, 4> MENU_MODES = {
     Mode::NORMAL_TTT, Mode::INFINITE_TTT, Mode::VS_COMPUTER, Mode::ONLINE};
@@ -82,6 +83,7 @@ struct GameState {
   std::array<int, 2> score = {}; // zero-initialized
   std::array<BoxState, 9> Boxes = {};
   std::queue<int> order;
+
   Player roundWinner = Player::NONE;
   Player currentPlayer = Player::X;
 
@@ -93,6 +95,7 @@ struct GameState {
     Boxes.fill(BoxState::EMPTY);
     numberOfX = 0;
     numberOfO = 0;
+
     roundWinner = Player::NONE;
     while (!order.empty()) {
       order.pop();
@@ -108,7 +111,9 @@ struct GameState {
     numberOfO = 0;
     numberOfX = 0;
     roundWinner = Player::NONE;
+
     while (!order.empty()) {
+
       order.pop();
     }
   }
@@ -249,8 +254,7 @@ Player checkForWinner(GameState &gameState) {
   }
   return Player::NONE;
 }
-void drawGrid(sf::RenderWindow &window, sf::Font &textFont,
-              GameState &gameState) {
+void drawGrid(sf::RenderWindow &window, sf::Font &textFont) {
   // tic  toe contour
   sf::RectangleShape countour({BOX_SIDE, BOX_SIDE});
   countour.setPosition({BOX_X_OFFSET, BOX_Y_OFFSET});
@@ -279,7 +283,7 @@ void checkAndDrawWinnerAndScore(sf::RenderWindow &window, sf::Font &textFont,
     // check for win
     if (checkForWinner(gameState) == Player::X) {
       gameState.roundWinner = Player::X;
-      // is with a flag that controll the set)
+      gameState.currentPlayer = Player::NONE;
       winMsg.setString("X wins press (r) to replay");
       winMsg.setFillColor(sf::Color::Blue);
       winMsg.setCharacterSize(24);
@@ -288,8 +292,9 @@ void checkAndDrawWinnerAndScore(sf::RenderWindow &window, sf::Font &textFont,
       drawCenteredText(window, bounds, winMsg);
 
     } else if (checkForWinner(gameState) == Player::O) {
-      gameState.roundWinner = Player::NONE;
+      gameState.roundWinner = Player::O;
 
+      gameState.currentPlayer = Player::NONE;
       winMsg.setString("O wins press (r) to replay");
       winMsg.setFillColor(sf::Color::Red);
       winMsg.setCharacterSize(24);
@@ -313,7 +318,7 @@ void checkAndDrawWinnerAndScore(sf::RenderWindow &window, sf::Font &textFont,
 void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
                      GameState &gameState, sf::Vector2i &mousePos,
                      sf::Color &color) {
-  drawGrid(window, textFont, gameState);
+  drawGrid(window, textFont);
   drawXO(window, textFont, gameState); // On the boxes
   drawTTTHighlights(window, color, mousePos, gameState);
   checkAndDrawWinnerAndScore(window, textFont, gameState);
@@ -321,10 +326,81 @@ void renderNormalTTT(sf::RenderWindow &window, sf::Font &textFont,
 void renderInfiniteTTT(sf::RenderWindow &window, sf::Font &textFont,
                        GameState &gameState, sf::Vector2i &mousePos,
                        sf::Color &color) {
-  drawGrid(window, textFont, gameState);
+  drawGrid(window, textFont);
   drawXO(window, textFont, gameState); // On the boxes
   drawTTTHighlights(window, color, mousePos, gameState);
   checkAndDrawWinnerAndScore(window, textFont, gameState);
+}
+int checkIfOneMoveWinsForO(sf::RenderWindow &window, GameState &gameState) {
+
+  if (gameState.numberOfO >= 2) {
+    for (int i = 0; i < winConditions.size(); i++) {
+      if (gameState.Boxes[winConditions[i].a] == BoxState::O &&
+          gameState.Boxes[winConditions[i].b] == BoxState::O &&
+          gameState.Boxes[winConditions[i].c] == BoxState::EMPTY)
+        return winConditions[i].c;
+      else if (gameState.Boxes[winConditions[i].a] == BoxState::O &&
+               gameState.Boxes[winConditions[i].b] == BoxState::EMPTY &&
+               gameState.Boxes[winConditions[i].c] == BoxState::O)
+        return winConditions[i].b;
+      else if (gameState.Boxes[winConditions[i].a] == BoxState::EMPTY &&
+               gameState.Boxes[winConditions[i].b] == BoxState::O &&
+               gameState.Boxes[winConditions[i].c] == BoxState::O)
+        return winConditions[i].a;
+    }
+  }
+  return -1;
+}
+void computerPlay(sf::RenderWindow &window, GameState &gameState) {
+  if (gameState.currentPlayer == Player::O) {
+    std::mt19937 rng(std::random_device{}());
+    std::vector<int> emptyBoxes;
+    for (int i = 0; i < 9; i++) {
+      if (gameState.Boxes[i] == BoxState::EMPTY) {
+        emptyBoxes.push_back(i);
+      }
+    }
+
+    if (emptyBoxes.empty()) {
+      gameState.currentPlayer = Player::NONE;
+      return; // end game
+    }
+    // check if it's possible to place an O so the computer wins
+    int resultOfDumbAlgo = checkIfOneMoveWinsForO(window, gameState);
+    if (resultOfDumbAlgo != -1) {
+      // we got our winner
+      gameState.Boxes[resultOfDumbAlgo] = BoxState::O;
+    } else {
+      // random O
+      std::shuffle(emptyBoxes.begin(), emptyBoxes.end(), rng);
+      gameState.Boxes[emptyBoxes[0]] = BoxState::O;
+    }
+    gameState.numberOfO++;
+    gameState.currentPlayer = Player::X;
+  }
+}
+
+void renderVsComputerTTT(sf::RenderWindow &window, sf::Font &textFont,
+                         GameState &gameState, sf::Vector2i &mousePos,
+                         sf::Color &color) {
+  drawGrid(window, textFont);
+  // for now the player will be X the computer will be O
+  drawXO(window, textFont, gameState);
+  drawTTTHighlights(window, color, mousePos, gameState);
+  checkAndDrawWinnerAndScore(window, textFont, gameState);
+  computerPlay(window, gameState);
+}
+bool checkTTTClick(sf::Vector2i &localPosition, sf::FloatRect &bounds,
+                   GameState &gameState, int box) {
+  if (localPosition.x > bounds.position.x &&
+      localPosition.x < bounds.position.x + bounds.size.x &&
+      localPosition.y > bounds.position.y &&
+      localPosition.y < bounds.position.y + bounds.size.y &&
+      gameState.Boxes[box] == BoxState::EMPTY &&
+      gameState.roundWinner == Player::NONE)
+    return true;
+  else
+    return false;
 }
 int main() {
   sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}),
@@ -334,7 +410,6 @@ int main() {
   bool transition = false; // to reset event loop
   AppState appState;
   GameState gameState;
-
   auto OnMouseClicked = [&](const sf::Event::MouseButtonPressed) {
     // draw "X" or "O" and  add the boxNumber to boxesWith X or O
     sf::Vector2i localPosition = sf::Mouse::getPosition(window);
@@ -353,12 +428,7 @@ int main() {
     } else if (appState.mode == Mode::NORMAL_TTT && !transition) {
       for (int i = 0; i < 9; i++) {
         auto bounds = TTT_BOXES_BOUNDS[i];
-        if (localPosition.x > bounds.position.x &&
-            localPosition.x < bounds.position.x + bounds.size.x &&
-            localPosition.y > bounds.position.y &&
-            localPosition.y < bounds.position.y + bounds.size.y &&
-            gameState.Boxes[i] == BoxState::EMPTY &&
-            gameState.roundWinner == Player::NONE) {
+        if (checkTTTClick(localPosition, bounds, gameState, i)) {
           if (gameState.currentPlayer == Player::X) {
             gameState.Boxes[i] = BoxState::X;
             gameState.numberOfX++;
@@ -374,12 +444,8 @@ int main() {
       int firstBoxInQueue;
       for (int i = 0; i < 9; i++) {
         auto bounds = TTT_BOXES_BOUNDS[i];
-        if (localPosition.x > bounds.position.x &&
-            localPosition.x < bounds.position.x + bounds.size.x &&
-            localPosition.y > bounds.position.y &&
-            localPosition.y < bounds.position.y + bounds.size.y &&
-            gameState.Boxes[i] == BoxState::EMPTY &&
-            gameState.roundWinner == Player::NONE) {
+
+        if (checkTTTClick(localPosition, bounds, gameState, i)) {
           if (gameState.currentPlayer == Player::X) {
             gameState.order.push(i);
             gameState.Boxes[i] = BoxState::X;
@@ -402,6 +468,18 @@ int main() {
               gameState.order.pop();
               gameState.numberOfX--;
             }
+          }
+        }
+      }
+    } else if (appState.mode == Mode::VS_COMPUTER) {
+      for (int i = 0; i < 9; i++) {
+        auto bounds = TTT_BOXES_BOUNDS[i];
+        if (checkTTTClick(localPosition, bounds, gameState, i)) {
+          // only X for now
+          if (gameState.currentPlayer == Player::X) {
+            gameState.Boxes[i] = BoxState::X;
+            gameState.numberOfX++;
+            gameState.currentPlayer = Player::O;
           }
         }
       }
@@ -442,6 +520,9 @@ int main() {
       renderNormalTTT(window, xoFont, gameState, mousePos, highlighterColor);
     } else if (appState.mode == Mode::INFINITE_TTT) {
       renderInfiniteTTT(window, xoFont, gameState, mousePos, highlighterColor);
+    } else if (appState.mode == Mode::VS_COMPUTER) {
+      renderVsComputerTTT(window, xoFont, gameState, mousePos,
+                          highlighterColor);
     } else {
       gameState.reset_score();
     }
