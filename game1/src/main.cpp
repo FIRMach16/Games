@@ -152,7 +152,7 @@ void drawMenuHighlights(sf::RenderWindow &window, sf::Color &color,
     }
   }
 }
-void drawCenteredText(sf::RenderWindow &window, sf::FloatRect &bounds,
+void drawCenteredText(sf::RenderWindow &window, sf::FloatRect bounds,
                       sf::Text text) {
   sf::FloatRect textBounds = text.getGlobalBounds();
   text.setOrigin({textBounds.size.x / 2.0f, textBounds.size.y / 2.0f});
@@ -174,26 +174,25 @@ void renderMenu(sf::RenderWindow &window, sf::Font &textFont, sf::Color &color,
     sf::Text menuItemTexts(textFont);
     menuItemTexts.setCharacterSize(24);
     menuItemTexts.setFillColor(sf::Color::Black);
-    sf::FloatRect bounds = MENU_ITEMS_BOUNDS[i];
     switch (i) {
     case 0: {
       menuItemTexts.setString("Normal Tic Tac Toe");
-      drawCenteredText(window, bounds, menuItemTexts);
+      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
       break;
     }
     case 1: {
       menuItemTexts.setString("Infinite Tic Tac Toe");
-      drawCenteredText(window, bounds, menuItemTexts);
+      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
       break;
     }
     case 2: {
       menuItemTexts.setString("VsComputer");
-      drawCenteredText(window, bounds, menuItemTexts);
+      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
       break;
     }
     case 3: {
       menuItemTexts.setString("Online");
-      drawCenteredText(window, bounds, menuItemTexts);
+      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
       break;
     }
     }
@@ -218,11 +217,9 @@ void drawXO(sf::RenderWindow &window, sf::Font &textFont,
   Omark.setCharacterSize(24);
   for (int i = 0; i < 9; i++) {
     if (gameState.Boxes[i] == BoxState::X) {
-      sf::FloatRect bounds = TTT_BOXES_BOUNDS[i];
-      drawCenteredText(window, bounds, Xmark);
+      drawCenteredText(window, TTT_BOXES_BOUNDS[i], Xmark);
     } else if (gameState.Boxes[i] == BoxState::O) {
-      sf::FloatRect bounds = TTT_BOXES_BOUNDS[i];
-      drawCenteredText(window, bounds, Omark);
+      drawCenteredText(window, TTT_BOXES_BOUNDS[i], Omark);
     }
   }
   // this code helps the players know whose turn it is
@@ -379,11 +376,12 @@ void renderTTT(sf::RenderWindow &renderWindow, AppState &appState,
     drawTTTHighlights(renderWindow, highlighterColor, mousePosition, gameState);
   }
 
-  if (appState.mode == Mode::VS_COMPUTER) {
+  drawWinnerAndScore(renderWindow, textFont, gameState);
+  if (appState.mode == Mode::VS_COMPUTER &&
+      gameState.roundWinner == Player::NONE) {
 
     computerPlay(renderWindow, gameState);
   }
-  drawWinnerAndScore(renderWindow, textFont, gameState);
   drawXO(renderWindow, textFont, gameState);
 }
 
