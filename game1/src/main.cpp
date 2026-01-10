@@ -165,31 +165,6 @@ std::vector<int> findEmptyCells(GameState &gameState) {
   }
   return emptyCells;
 }
-void computerPlay(GameState &gameState) {
-
-  if (gameState.currentPlayer == Player::O) {
-    std::vector<int> emptyCells = findEmptyCells(gameState);
-    if (emptyCells.empty()) {
-      gameState.currentPlayer = Player::NONE;
-      return; // end game
-    }
-    if (findWinningMove(gameState, CellState::O) != -1) {
-      // win
-      gameState.Cells[findWinningMove(gameState, CellState::O)] = CellState::O;
-    } else if (findWinningMove(gameState, CellState::X) != -1) {
-      // block X
-      gameState.Cells[findWinningMove(gameState, CellState::X)] = CellState::O;
-    }
-
-    else {
-      // random Move
-      randomMove(gameState, emptyCells);
-    }
-    // random O
-    gameState.numberOfO++;
-    gameState.currentPlayer = Player::X;
-  }
-}
 
 class AiPlayerStrategy {
 public:
@@ -217,7 +192,7 @@ public:
 class IntermediateDifficultyStrategy : public AiPlayerStrategy {
 public:
   void play(GameState &gameState) override {
-    // random or one move win or block adversry from wining
+    // random or one move win or block adversary from wining
     if (gameState.currentPlayer == Player::O) {
       std::vector<int> emptyCells = findEmptyCells(gameState);
       if (emptyCells.empty()) {
@@ -486,11 +461,6 @@ void renderTTT(sf::RenderWindow &renderWindow, AppState &appState,
   }
 
   drawWinnerAndScore(renderWindow, textFont, gameState);
-  if (appState.mode == Mode::VS_COMPUTER &&
-      gameState.roundWinner == Player::NONE) {
-
-    computerPlay(gameState);
-  }
   drawXO(renderWindow, textFont, gameState);
 }
 
