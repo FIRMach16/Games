@@ -51,6 +51,16 @@ constexpr std::array<sf::FloatRect, 9> TTT_BOXES_BOUNDS = [] {
   }
   return bounds;
 }();
+constexpr std::array<sf::FloatRect, 3> DIFFICULTY_MENU_ITEMS_BOUNDS = [] {
+  std::array<sf::FloatRect, 3> bounds = {};
+  for (int i = 0; i < 3; i++) {
+    bounds[i] = {
+        {menuItemXOffset,
+         menuFirstItemYOffset + i * (menuItemSpacing * 2 + menuItemHeight)},
+        {menuItemWidth, menuItemHeight}};
+  }
+  return bounds;
+}();
 constexpr std::array<sf::FloatRect, 4> MENU_ITEMS_BOUNDS = [] {
   std::array<sf::FloatRect, 4> bounds = {};
   for (int i = 0; i < 4; i++) {
@@ -60,18 +70,27 @@ constexpr std::array<sf::FloatRect, 4> MENU_ITEMS_BOUNDS = [] {
   }
   return bounds;
 }();
+constexpr std::array<const char *, 3> aiDifficulties = {
+    "Beginner", "Intermediate", "Expert"};
+constexpr std::array<const char *, 4> menuItems = {
+    "Normal TicTacToe", "Infite TicTacToe", "VsComputer", "Online"};
 
-enum class BoxState { EMPTY, X, O };
+enum class CellState { EMPTY, X, O };
 enum class Player { X, O, NONE };
 enum class Mode {
   MENU,
   NORMAL_TTT,
   INFINITE_TTT,
-  VS_COMPUTER, // upcoming
-  ONLINE       // upcoming
+  VS_COMPUTER,
+  ONLINE // upcoming
 }; // TTT means TicTacToe;
+enum class AiDifficulty { NONE_SELECTED, BEGINNER, INTERMIDIATE, EXPERT };
 constexpr std::array<Mode, 4> MENU_MODES = {
     Mode::NORMAL_TTT, Mode::INFINITE_TTT, Mode::VS_COMPUTER, Mode::ONLINE};
+constexpr std::array<AiDifficulty, 3> AI_DIFFICULTIES_MODE = {
+    AiDifficulty::BEGINNER, AiDifficulty::INTERMIDIATE, AiDifficulty::EXPERT
+
+};
 struct AppState {
   Mode mode = Mode::MENU;
 };
@@ -80,10 +99,10 @@ struct GameState {
   int roundsCounter = 0;
   int numberOfX = 0;
   int numberOfO = 0;
-  std::array<int, 2> score = {}; // zero-initialized
-  std::array<BoxState, 9> Boxes = {};
+  std::array<int, 2> score = {};       // zero-initialized
+  std::array<CellState, 9> Cells = {}; // zero-initialized (empty in this case)
   std::queue<int> order;
-
+  AiDifficulty aiDifficulty = AiDifficulty::NONE_SELECTED;
   Player roundWinner = Player::NONE;
   Player currentPlayer = Player::X;
 
@@ -92,7 +111,7 @@ struct GameState {
       currentPlayer = Player::X;
     else
       currentPlayer = Player::O;
-    Boxes.fill(BoxState::EMPTY);
+    Cells.fill(CellState::EMPTY);
     numberOfX = 0;
     numberOfO = 0;
 
@@ -101,22 +120,148 @@ struct GameState {
       order.pop();
     }
   }
-  void
-  reset_score() { // will call this when i change the app state or with when the
-                  // players want to reset the score via (keybord or mouse)
+  void reset_score() {
     score.fill(0);
     currentPlayer = Player::X;
-    Boxes.fill(BoxState::EMPTY);
+    Cells.fill(CellState::EMPTY);
     roundsCounter = 0;
     numberOfO = 0;
     numberOfX = 0;
     roundWinner = Player::NONE;
-
+    aiDifficulty = AiDifficulty::NONE_SELECTED;
     while (!order.empty()) {
       order.pop();
     }
   }
 };
+int findWinningMove(GameState &gameState, CellState boxState) {
+  for (int i = 0; i < winConditions.size(); i++) {
+    if (gameState.Cells[winConditions[i].a] == boxState &&
+        gameState.Cells[winConditions[i].b] == boxState &&
+        gameState.Cells[winConditions[i].c] == CellState::EMPTY)
+      return winConditions[i].c;
+    else if (gameState.Cells[winConditions[i].a] == boxState &&
+             gameState.Cells[winConditions[i].b] == CellState::EMPTY &&
+             gameState.Cells[winConditions[i].c] == boxState)
+      return winConditions[i].b;
+    else if (gameState.Cells[winConditions[i].a] == CellState::EMPTY &&
+             gameState.Cells[winConditions[i].b] == boxState &&
+             gameState.Cells[winConditions[i].c] == boxState)
+      return winConditions[i].a;
+  }
+  return -1;
+}
+void randomMove(GameState &gameState, std::vector<int> &emptyCells) {
+  std::mt19937 rng(std::random_device{}());
+  std::shuffle(emptyCells.begin(), emptyCells.end(), rng);
+  gameState.Cells[emptyCells[0]] = CellState::O;
+}
+std::vector<int> findEmptyCells(GameState &gameState) {
+  std::vector<int> emptyCells;
+  for (int i = 0; i < 9; i++) {
+    if (gameState.Cells[i] == CellState::EMPTY) {
+      emptyCells.push_back(i);
+    }
+  }
+  return emptyCells;
+}
+void computerPlay(GameState &gameState) {
+
+  if (gameState.currentPlayer == Player::O) {
+    std::vector<int> emptyCells = findEmptyCells(gameState);
+    if (emptyCells.empty()) {
+      gameState.currentPlayer = Player::NONE;
+      return; // end game
+    }
+    if (findWinningMove(gameState, CellState::O) != -1) {
+      // win
+      gameState.Cells[findWinningMove(gameState, CellState::O)] = CellState::O;
+    } else if (findWinningMove(gameState, CellState::X) != -1) {
+      // block X
+      gameState.Cells[findWinningMove(gameState, CellState::X)] = CellState::O;
+    }
+
+    else {
+      // random Move
+      randomMove(gameState, emptyCells);
+    }
+    // random O
+    gameState.numberOfO++;
+    gameState.currentPlayer = Player::X;
+  }
+}
+
+class AiPlayerStrategy {
+public:
+  virtual void play(GameState &gameState) = 0;
+};
+class BeginnerDifficultyStrategy : public AiPlayerStrategy {
+public:
+  void play(GameState &gameState) override {
+    // random or one move win
+    if (gameState.currentPlayer == Player::O) {
+      std::vector<int> emptyCells = findEmptyCells(gameState);
+      if (emptyCells.empty())
+        return;
+      if (findWinningMove(gameState, CellState::O) != -1) {
+        gameState.Cells[findWinningMove(gameState, CellState::O)] =
+            CellState::O;
+      } else {
+        randomMove(gameState, emptyCells);
+      }
+      gameState.currentPlayer = Player::X;
+      gameState.numberOfO++;
+    }
+  }
+};
+class IntermediateDifficultyStrategy : public AiPlayerStrategy {
+public:
+  void play(GameState &gameState) override {
+    // random or one move win or block adversry from wining
+    if (gameState.currentPlayer == Player::O) {
+      std::vector<int> emptyCells = findEmptyCells(gameState);
+      if (emptyCells.empty()) {
+        gameState.currentPlayer = Player::NONE;
+        return; // end game
+      }
+      if (findWinningMove(gameState, CellState::O) != -1) {
+        gameState.Cells[findWinningMove(gameState, CellState::O)] =
+            CellState::O;
+      } else if (findWinningMove(gameState, CellState::X) != -1) {
+        gameState.Cells[findWinningMove(gameState, CellState::X)] =
+            CellState::O;
+      } else {
+        randomMove(gameState, emptyCells);
+      }
+      gameState.numberOfO++;
+      gameState.currentPlayer = Player::X;
+    }
+  }
+};
+class ExpertDifficultyStrategy : public AiPlayerStrategy {
+public:
+  void play(GameState &gameState) override {
+    // minmax with prunning
+  }
+};
+
+class NoPlayStrategy : public AiPlayerStrategy {
+public:
+  void play(GameState &gameState) override {}
+};
+
+class AiPlayer {
+public:
+  GameState &gameState;
+  AiPlayerStrategy *strategy;
+  AiPlayer(GameState &gs) : gameState(gs) {
+    NoPlayStrategy *initStrat;
+    this->strategy = initStrat;
+  }
+  void play() { strategy->play(gameState); }
+  void setStrategy(AiPlayerStrategy *strategy) { this->strategy = strategy; }
+};
+
 void drawTTTHighlights(sf::RenderWindow &window, sf::Color &color,
                        sf::Vector2i mousePos, GameState &gameState) {
   for (int i = 0; i < 9; i++) {
@@ -126,7 +271,7 @@ void drawTTTHighlights(sf::RenderWindow &window, sf::Color &color,
         mousePos.y > TTT_BOXES_BOUNDS[i].position.y &&
         mousePos.y <
             TTT_BOXES_BOUNDS[i].position.y + TTT_BOXES_BOUNDS[i].size.y &&
-        gameState.Boxes[i] == BoxState::EMPTY) {
+        gameState.Cells[i] == CellState::EMPTY) {
 
       sf::RectangleShape highlighter(TTT_BOXES_BOUNDS[i].size);
       highlighter.setPosition(TTT_BOXES_BOUNDS[i].position);
@@ -160,6 +305,27 @@ void drawCenteredText(sf::RenderWindow &window, sf::FloatRect bounds,
                     bounds.position.y + bounds.size.y / 2.0f});
   window.draw(text);
 }
+void renderDifficultyMenu(sf::RenderWindow &renderWindow, sf::Font textFont,
+                          sf::Color &highlighterColor,
+                          sf::Vector2i &mousePosition) {
+  for (int i = 0; i < 3; i++) {
+    sf::RectangleShape difficultyMenuItem(
+        {DIFFICULTY_MENU_ITEMS_BOUNDS[i].size.x,
+         DIFFICULTY_MENU_ITEMS_BOUNDS[i].size.y});
+    difficultyMenuItem.setPosition(
+        {DIFFICULTY_MENU_ITEMS_BOUNDS[i].position.x,
+         DIFFICULTY_MENU_ITEMS_BOUNDS[i].position.y});
+    difficultyMenuItem.setOutlineColor(sf::Color::Black);
+    difficultyMenuItem.setOutlineThickness(10.0f);
+    renderWindow.draw(difficultyMenuItem);
+    sf::Text menuItemTexts(textFont);
+    menuItemTexts.setCharacterSize(24);
+    menuItemTexts.setFillColor(sf::Color::Black);
+    menuItemTexts.setString(aiDifficulties[i]);
+    drawCenteredText(renderWindow, DIFFICULTY_MENU_ITEMS_BOUNDS[i],
+                     menuItemTexts);
+  }
+}
 void renderMenu(sf::RenderWindow &window, sf::Font &textFont, sf::Color &color,
                 sf::Vector2i &mousePos) {
   for (int i = 0; i < 4; i++) {
@@ -174,28 +340,8 @@ void renderMenu(sf::RenderWindow &window, sf::Font &textFont, sf::Color &color,
     sf::Text menuItemTexts(textFont);
     menuItemTexts.setCharacterSize(24);
     menuItemTexts.setFillColor(sf::Color::Black);
-    switch (i) {
-    case 0: {
-      menuItemTexts.setString("Normal Tic Tac Toe");
-      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
-      break;
-    }
-    case 1: {
-      menuItemTexts.setString("Infinite Tic Tac Toe");
-      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
-      break;
-    }
-    case 2: {
-      menuItemTexts.setString("VsComputer");
-      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
-      break;
-    }
-    case 3: {
-      menuItemTexts.setString("Online");
-      drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
-      break;
-    }
-    }
+    menuItemTexts.setString(menuItems[i]);
+    drawCenteredText(window, MENU_ITEMS_BOUNDS[i], menuItemTexts);
   }
 }
 
@@ -216,9 +362,9 @@ void drawXO(sf::RenderWindow &window, sf::Font &textFont,
   Xmark.setCharacterSize(24);
   Omark.setCharacterSize(24);
   for (int i = 0; i < 9; i++) {
-    if (gameState.Boxes[i] == BoxState::X) {
+    if (gameState.Cells[i] == CellState::X) {
       drawCenteredText(window, TTT_BOXES_BOUNDS[i], Xmark);
-    } else if (gameState.Boxes[i] == BoxState::O) {
+    } else if (gameState.Cells[i] == CellState::O) {
       drawCenteredText(window, TTT_BOXES_BOUNDS[i], Omark);
     }
   }
@@ -231,16 +377,15 @@ void drawXO(sf::RenderWindow &window, sf::Font &textFont,
 }
 Player checkForWinner(GameState &gameState) {
   for (int i = 0; i < winConditions.size(); i++) {
-    if (gameState.Boxes[winConditions[i].a] == BoxState::X &&
-        gameState.Boxes[winConditions[i].b] == BoxState::X &&
-        gameState.Boxes[winConditions[i].c] == BoxState::X) {
+    if (gameState.Cells[winConditions[i].a] == CellState::X &&
+        gameState.Cells[winConditions[i].b] == CellState::X &&
+        gameState.Cells[winConditions[i].c] == CellState::X) {
       {
-        cout << "X won" << endl;
         return Player::X;
       }
-    } else if (gameState.Boxes[winConditions[i].a] == BoxState::O &&
-               gameState.Boxes[winConditions[i].b] == BoxState::O &&
-               gameState.Boxes[winConditions[i].c] == BoxState::O) {
+    } else if (gameState.Cells[winConditions[i].a] == CellState::O &&
+               gameState.Cells[winConditions[i].b] == CellState::O &&
+               gameState.Cells[winConditions[i].c] == CellState::O) {
       {
         return Player::O;
       }
@@ -283,7 +428,6 @@ void checkWinnerAndIncrementScore(GameState &gameState) {
 }
 void drawWinnerAndScore(sf::RenderWindow &window, sf::Font &textFont,
                         GameState &gameState) {
-
   sf::Text winMsg(textFont);
 
   if (gameState.roundWinner == Player::NONE) {
@@ -314,57 +458,22 @@ void drawWinnerAndScore(sf::RenderWindow &window, sf::Font &textFont,
   score.setFillColor(sf::Color::Black);
   drawCenteredText(window, bounds, score);
 }
-int returnWinningMove(GameState &gameState, BoxState boxState) {
-  for (int i = 0; i < winConditions.size(); i++) {
-    if (gameState.Boxes[winConditions[i].a] == boxState &&
-        gameState.Boxes[winConditions[i].b] == boxState &&
-        gameState.Boxes[winConditions[i].c] == BoxState::EMPTY)
-      return winConditions[i].c;
-    else if (gameState.Boxes[winConditions[i].a] == boxState &&
-             gameState.Boxes[winConditions[i].b] == BoxState::EMPTY &&
-             gameState.Boxes[winConditions[i].c] == boxState)
-      return winConditions[i].b;
-    else if (gameState.Boxes[winConditions[i].a] == BoxState::EMPTY &&
-             gameState.Boxes[winConditions[i].b] == boxState &&
-             gameState.Boxes[winConditions[i].c] == boxState)
-      return winConditions[i].a;
+
+void renderTTTwithAi(sf::RenderWindow &renderWindow, AppState &appState,
+                     GameState &gameState, sf::Font &textFont,
+                     sf::Vector2i mousePosition, sf::Color &highlighterColor,
+                     AiPlayer aiPlayer) {
+  drawGrid(renderWindow, textFont);
+  if (gameState.roundWinner == Player::NONE) {
+    drawTTTHighlights(renderWindow, highlighterColor, mousePosition, gameState);
   }
-  return -1;
-}
-
-void computerPlay(sf::RenderWindow &window, GameState &gameState) {
-  if (gameState.currentPlayer == Player::O) {
-    std::mt19937 rng(std::random_device{}());
-    std::vector<int> emptyBoxes;
-    for (int i = 0; i < 9; i++) {
-      if (gameState.Boxes[i] == BoxState::EMPTY) {
-        emptyBoxes.push_back(i);
-      }
-    }
-    if (emptyBoxes.empty()) {
-      gameState.currentPlayer = Player::NONE;
-      return; // end game
-    }
-    // check if  O can win with one move
-    if (returnWinningMove(gameState, BoxState::O) != -1) {
-      // win
-      gameState.Boxes[returnWinningMove(gameState, BoxState::O)] = BoxState::O;
-    } else if (returnWinningMove(gameState, BoxState::X) != -1) {
-      // block X
-      gameState.Boxes[returnWinningMove(gameState, BoxState::X)] = BoxState::O;
-    }
-
-    else {
-      // random Move
-      std::shuffle(emptyBoxes.begin(), emptyBoxes.end(), rng);
-      gameState.Boxes[emptyBoxes[0]] = BoxState::O;
-    }
-    // random O
-    gameState.numberOfO++;
-    gameState.currentPlayer = Player::X;
+  drawWinnerAndScore(renderWindow, textFont, gameState);
+  if (appState.mode == Mode::VS_COMPUTER &&
+      gameState.roundWinner == Player::NONE) {
+    aiPlayer.play();
   }
+  drawXO(renderWindow, textFont, gameState);
 }
-
 void renderTTT(sf::RenderWindow &renderWindow, AppState &appState,
                GameState &gameState, sf::Font &textFont,
                sf::Vector2i mousePosition, sf::Color &highlighterColor) {
@@ -380,7 +489,7 @@ void renderTTT(sf::RenderWindow &renderWindow, AppState &appState,
   if (appState.mode == Mode::VS_COMPUTER &&
       gameState.roundWinner == Player::NONE) {
 
-    computerPlay(renderWindow, gameState);
+    computerPlay(gameState);
   }
   drawXO(renderWindow, textFont, gameState);
 }
@@ -391,93 +500,125 @@ bool checkTTTClick(sf::Vector2i &localPosition, sf::FloatRect &bounds,
       localPosition.x < bounds.position.x + bounds.size.x &&
       localPosition.y > bounds.position.y &&
       localPosition.y < bounds.position.y + bounds.size.y &&
-      gameState.Boxes[box] == BoxState::EMPTY &&
+      gameState.Cells[box] == CellState::EMPTY &&
       gameState.roundWinner == Player::NONE)
     return true;
   else
     return false;
 }
+void handleClickInInfiniteTTT(GameState &gameState,
+                              sf::Vector2i &localPosition) {
+  int firstBoxInQueue;
+  for (int i = 0; i < 9; i++) {
+    auto bounds = TTT_BOXES_BOUNDS[i];
+
+    if (checkTTTClick(localPosition, bounds, gameState, i)) {
+      if (gameState.currentPlayer == Player::X) {
+        gameState.order.push(i);
+        gameState.Cells[i] = CellState::X;
+        gameState.numberOfX++;
+        gameState.currentPlayer = Player::O;
+        if (gameState.numberOfO == 3) {
+          firstBoxInQueue = gameState.order.front();
+          gameState.Cells[firstBoxInQueue] = CellState::EMPTY;
+          gameState.order.pop();
+          gameState.numberOfO--;
+        }
+      } else {
+        gameState.order.push(i);
+        gameState.Cells[i] = CellState::O;
+        gameState.numberOfO++;
+        gameState.currentPlayer = Player::X;
+        if (gameState.numberOfX == 3) {
+          firstBoxInQueue = gameState.order.front();
+          gameState.Cells[firstBoxInQueue] = CellState::EMPTY;
+          gameState.order.pop();
+          gameState.numberOfX--;
+        }
+      }
+    }
+  }
+}
+void handleClickInNormalTTT(GameState &gameState, sf::Vector2i &localPosition) {
+  for (int i = 0; i < 9; i++) {
+    auto bounds = TTT_BOXES_BOUNDS[i];
+    if (checkTTTClick(localPosition, bounds, gameState, i)) {
+      if (gameState.currentPlayer == Player::X) {
+        gameState.Cells[i] = CellState::X;
+        gameState.numberOfX++;
+        gameState.currentPlayer = Player::O;
+      } else {
+        gameState.Cells[i] = CellState::O;
+        gameState.numberOfO++;
+        gameState.currentPlayer = Player::X;
+      }
+    }
+  }
+}
+void handleClickInMainMenu(AppState &appState, GameState &gameState,
+                           bool &transition, sf::Vector2i &localPosition) {
+  for (int i = 0; i < MENU_MODES.size(); i++) {
+    auto bounds = MENU_ITEMS_BOUNDS[i];
+    if (localPosition.x > bounds.position.x &&
+        localPosition.x < bounds.position.x + bounds.size.x &&
+        localPosition.y > bounds.position.y &&
+        localPosition.y < bounds.position.y + bounds.size.y) {
+      appState.mode = MENU_MODES[i];
+      gameState.reset_score();
+      transition = true;
+    }
+  }
+}
+void handleClickInVsComputerTTT(GameState &gameState,
+                                sf::Vector2i &localPosition, bool &transition) {
+  if (gameState.aiDifficulty == AiDifficulty::NONE_SELECTED) {
+    for (int i = 0; i < AI_DIFFICULTIES_MODE.size(); i++) {
+      auto bounds = DIFFICULTY_MENU_ITEMS_BOUNDS[i];
+      if (localPosition.x > bounds.position.x &&
+          localPosition.x < bounds.position.x + bounds.size.x &&
+          localPosition.y > bounds.position.y &&
+          localPosition.y < bounds.position.y + bounds.size.y) {
+        gameState.aiDifficulty = AI_DIFFICULTIES_MODE[i];
+        transition = true;
+      }
+    }
+  } else {
+    for (int i = 0; i < 9; i++) {
+      auto bounds = TTT_BOXES_BOUNDS[i];
+      if (checkTTTClick(localPosition, bounds, gameState, i)) {
+        // only X for now
+        if (gameState.currentPlayer == Player::X) {
+          gameState.Cells[i] = CellState::X;
+          gameState.numberOfX++;
+          gameState.currentPlayer = Player::O;
+        }
+      }
+    }
+  }
+}
 int main() {
   sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}),
                           "TicTacToe");
-
   sf::Font xoFont("../assets/HackNerdFontMono-Bold.ttf");
   bool transition = false; // to reset event loop
   AppState appState;
   GameState gameState;
+
+  BeginnerDifficultyStrategy beginner;
+  IntermediateDifficultyStrategy intermediate;
+  ExpertDifficultyStrategy expert;
+  AiPlayer aiPlayer(gameState);
   auto OnMouseClicked = [&](const sf::Event::MouseButtonPressed) {
     // draw "X" or "O" and  add the boxNumber to boxesWith X or O
     sf::Vector2i localPosition = sf::Mouse::getPosition(window);
     if (appState.mode == Mode::MENU) {
-      for (int i = 0; i < MENU_MODES.size(); i++) {
-        auto bounds = MENU_ITEMS_BOUNDS[i];
-        if (localPosition.x > bounds.position.x &&
-            localPosition.x < bounds.position.x + bounds.size.x &&
-            localPosition.y > bounds.position.y &&
-            localPosition.y < bounds.position.y + bounds.size.y) {
-          appState.mode = MENU_MODES[i];
-          gameState.reset_score();
-          transition = true;
-        }
-      }
+      handleClickInMainMenu(appState, gameState, transition, localPosition);
     } else if (appState.mode == Mode::NORMAL_TTT && !transition) {
-      for (int i = 0; i < 9; i++) {
-        auto bounds = TTT_BOXES_BOUNDS[i];
-        if (checkTTTClick(localPosition, bounds, gameState, i)) {
-          if (gameState.currentPlayer == Player::X) {
-            gameState.Boxes[i] = BoxState::X;
-            gameState.numberOfX++;
-            gameState.currentPlayer = Player::O;
-          } else {
-            gameState.Boxes[i] = BoxState::O;
-            gameState.numberOfO++;
-            gameState.currentPlayer = Player::X;
-          }
-        }
-      }
+      handleClickInNormalTTT(gameState, localPosition);
     } else if (appState.mode == Mode::INFINITE_TTT) {
-      int firstBoxInQueue;
-      for (int i = 0; i < 9; i++) {
-        auto bounds = TTT_BOXES_BOUNDS[i];
-
-        if (checkTTTClick(localPosition, bounds, gameState, i)) {
-          if (gameState.currentPlayer == Player::X) {
-            gameState.order.push(i);
-            gameState.Boxes[i] = BoxState::X;
-            gameState.numberOfX++;
-            gameState.currentPlayer = Player::O;
-            if (gameState.numberOfO == 3) {
-              firstBoxInQueue = gameState.order.front();
-              gameState.Boxes[firstBoxInQueue] = BoxState::EMPTY;
-              gameState.order.pop();
-              gameState.numberOfO--;
-            }
-          } else {
-            gameState.order.push(i);
-            gameState.Boxes[i] = BoxState::O;
-            gameState.numberOfO++;
-            gameState.currentPlayer = Player::X;
-            if (gameState.numberOfX == 3) {
-              firstBoxInQueue = gameState.order.front();
-              gameState.Boxes[firstBoxInQueue] = BoxState::EMPTY;
-              gameState.order.pop();
-              gameState.numberOfX--;
-            }
-          }
-        }
-      }
+      handleClickInInfiniteTTT(gameState, localPosition);
     } else if (appState.mode == Mode::VS_COMPUTER) {
-      for (int i = 0; i < 9; i++) {
-        auto bounds = TTT_BOXES_BOUNDS[i];
-        if (checkTTTClick(localPosition, bounds, gameState, i)) {
-          // only X for now
-          if (gameState.currentPlayer == Player::X) {
-            gameState.Boxes[i] = BoxState::X;
-            gameState.numberOfX++;
-            gameState.currentPlayer = Player::O;
-          }
-        }
-      }
+      handleClickInVsComputerTTT(gameState, localPosition, transition);
     }
   };
   sf::Color highlighterColor = sf::Color::Cyan;
@@ -509,8 +650,28 @@ int main() {
     sf::Vector2i mousePos = sf::Mouse::getPosition(window);
     // draw everything here...
     if (appState.mode == Mode::MENU) {
+      gameState.reset_score();
       renderMenu(window, xoFont, highlighterColor, mousePos);
 
+    } else if (appState.mode == Mode::VS_COMPUTER) {
+
+      if (gameState.aiDifficulty == AiDifficulty::BEGINNER) {
+        aiPlayer.setStrategy(&beginner);
+        renderTTTwithAi(window, appState, gameState, xoFont, mousePos,
+                        highlighterColor, aiPlayer);
+
+      } else if (gameState.aiDifficulty == AiDifficulty::INTERMIDIATE) {
+        aiPlayer.setStrategy(&intermediate);
+        renderTTTwithAi(window, appState, gameState, xoFont, mousePos,
+                        highlighterColor, aiPlayer);
+
+      } else if (gameState.aiDifficulty == AiDifficulty::EXPERT) {
+        aiPlayer.setStrategy(&expert);
+        renderTTTwithAi(window, appState, gameState, xoFont, mousePos,
+                        highlighterColor, aiPlayer);
+      } else {
+        renderDifficultyMenu(window, xoFont, highlighterColor, mousePos);
+      }
     } else {
       renderTTT(window, appState, gameState, xoFont, mousePos,
                 highlighterColor);
