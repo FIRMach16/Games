@@ -301,7 +301,6 @@ public:
         }
         cells[idx] = CellState::EMPTY;
       }
-      cout << bestEval << endl;
       gameState.Cells[move] = CellState::O;
       gameState.numberOfO++;
       gameState.currentPlayer = Player::X;
