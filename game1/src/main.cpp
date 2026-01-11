@@ -134,19 +134,37 @@ struct GameState {
     }
   }
 };
-int findWinningMove(GameState &gameState, CellState boxState) {
+Player checkForWinner(std::array<CellState, 9> cells) {
   for (int i = 0; i < winConditions.size(); i++) {
-    if (gameState.Cells[winConditions[i].a] == boxState &&
-        gameState.Cells[winConditions[i].b] == boxState &&
-        gameState.Cells[winConditions[i].c] == CellState::EMPTY)
+    if (cells[winConditions[i].a] == CellState::X &&
+        cells[winConditions[i].b] == CellState::X &&
+        cells[winConditions[i].c] == CellState::X) {
+      {
+        return Player::X;
+      }
+    } else if (cells[winConditions[i].a] == CellState::O &&
+               cells[winConditions[i].b] == CellState::O &&
+               cells[winConditions[i].c] == CellState::O) {
+      {
+        return Player::O;
+      }
+    }
+  }
+  return Player::NONE;
+}
+int findWinningMove(std::array<CellState, 9> cells, CellState boxState) {
+  for (int i = 0; i < winConditions.size(); i++) {
+    if (cells[winConditions[i].a] == boxState &&
+        cells[winConditions[i].b] == boxState &&
+        cells[winConditions[i].c] == CellState::EMPTY)
       return winConditions[i].c;
-    else if (gameState.Cells[winConditions[i].a] == boxState &&
-             gameState.Cells[winConditions[i].b] == CellState::EMPTY &&
-             gameState.Cells[winConditions[i].c] == boxState)
+    else if (cells[winConditions[i].a] == boxState &&
+             cells[winConditions[i].b] == CellState::EMPTY &&
+             cells[winConditions[i].c] == boxState)
       return winConditions[i].b;
-    else if (gameState.Cells[winConditions[i].a] == CellState::EMPTY &&
-             gameState.Cells[winConditions[i].b] == boxState &&
-             gameState.Cells[winConditions[i].c] == boxState)
+    else if (cells[winConditions[i].a] == CellState::EMPTY &&
+             cells[winConditions[i].b] == boxState &&
+             cells[winConditions[i].c] == boxState)
       return winConditions[i].a;
   }
   return -1;
@@ -156,10 +174,10 @@ void randomMove(GameState &gameState, std::vector<int> &emptyCells) {
   std::shuffle(emptyCells.begin(), emptyCells.end(), rng);
   gameState.Cells[emptyCells[0]] = CellState::O;
 }
-std::vector<int> findEmptyCells(GameState &gameState) {
+std::vector<int> findEmptyCells(std::array<CellState, 9> cells) {
   std::vector<int> emptyCells;
   for (int i = 0; i < 9; i++) {
-    if (gameState.Cells[i] == CellState::EMPTY) {
+    if (cells[i] == CellState::EMPTY) {
       emptyCells.push_back(i);
     }
   }
@@ -175,11 +193,11 @@ public:
   void play(GameState &gameState) override {
     // random or one move win
     if (gameState.currentPlayer == Player::O) {
-      std::vector<int> emptyCells = findEmptyCells(gameState);
+      std::vector<int> emptyCells = findEmptyCells(gameState.Cells);
       if (emptyCells.empty())
         return;
-      if (findWinningMove(gameState, CellState::O) != -1) {
-        gameState.Cells[findWinningMove(gameState, CellState::O)] =
+      if (findWinningMove(gameState.Cells, CellState::O) != -1) {
+        gameState.Cells[findWinningMove(gameState.Cells, CellState::O)] =
             CellState::O;
       } else {
         randomMove(gameState, emptyCells);
@@ -194,16 +212,16 @@ public:
   void play(GameState &gameState) override {
     // random or one move win or block adversary from wining
     if (gameState.currentPlayer == Player::O) {
-      std::vector<int> emptyCells = findEmptyCells(gameState);
+      std::vector<int> emptyCells = findEmptyCells(gameState.Cells);
       if (emptyCells.empty()) {
         gameState.currentPlayer = Player::NONE;
         return; // end game
       }
-      if (findWinningMove(gameState, CellState::O) != -1) {
-        gameState.Cells[findWinningMove(gameState, CellState::O)] =
+      if (findWinningMove(gameState.Cells, CellState::O) != -1) {
+        gameState.Cells[findWinningMove(gameState.Cells, CellState::O)] =
             CellState::O;
-      } else if (findWinningMove(gameState, CellState::X) != -1) {
-        gameState.Cells[findWinningMove(gameState, CellState::X)] =
+      } else if (findWinningMove(gameState.Cells, CellState::X) != -1) {
+        gameState.Cells[findWinningMove(gameState.Cells, CellState::X)] =
             CellState::O;
       } else {
         randomMove(gameState, emptyCells);
@@ -213,10 +231,81 @@ public:
     }
   }
 };
+int evaluateBoard(std::array<CellState, 9> cells) {
+  if (checkForWinner(cells) == Player::NONE)
+    return 0;
+  else if (checkForWinner(cells) == Player::O)
+    return 1;
+  else if (checkForWinner(cells) == Player::X)
+    return -1;
+  return 0;
+}
+bool gameOver(std::array<CellState, 9> cells) {
+  if ((checkForWinner(cells) != Player::NONE) ||
+      findEmptyCells(cells).empty()) {
+    return true;
+  }
+  return false;
+}
+int minmaxingTTT(std::array<CellState, 9> cells, int depth, int alpha, int beta,
+                 bool maximizingPlayer) {
+  if ((depth == 0) || gameOver(cells)) {
+    return evaluateBoard(cells);
+  }
+  if (maximizingPlayer) {
+    int bestEval = INT32_MIN;
+    for (int idx : findEmptyCells(cells)) {
+      cells[idx] = CellState::O;
+      int eval = minmaxingTTT(cells, depth - 1, alpha, beta, false);
+      if (eval > bestEval) {
+        bestEval = eval;
+      }
+      cells[idx] = CellState::EMPTY;
+    }
+    return bestEval;
+  } else {
+    int worstEval = INT32_MAX;
+    for (int idx : findEmptyCells(cells)) {
+      cells[idx] = CellState::X;
+      int eval = minmaxingTTT(cells, depth - 1, alpha, beta, true);
+      if (eval < worstEval) {
+        worstEval = eval;
+      }
+      cells[idx] = CellState::EMPTY;
+    }
+    return worstEval;
+  }
+}
 class ExpertDifficultyStrategy : public AiPlayerStrategy {
 public:
   void play(GameState &gameState) override {
-    // minmax with prunning
+    // strategy :play the move on a copy of the cells evaluate then
+    // compare to other moves then selct the best move minmax with prunning
+    if (gameState.currentPlayer == Player::O) {
+
+      std::vector<int> emptyCells = findEmptyCells(gameState.Cells);
+      if (emptyCells.empty()) {
+        gameState.currentPlayer = Player::NONE;
+        return; // end game
+      }
+
+      std::array<CellState, 9> cells = gameState.Cells;
+      int bestEval = INT32_MIN, score, move;
+      for (int idx : emptyCells) {
+        cells[idx] = CellState::O;
+        score =
+            minmaxingTTT(cells, emptyCells.size(), INT32_MIN, INT32_MAX, false);
+        if (score > bestEval) {
+          bestEval = score;
+          move = idx;
+        }
+        cells[idx] = CellState::EMPTY;
+      }
+      cout << bestEval << endl;
+      gameState.Cells[move] = CellState::O;
+      gameState.numberOfO++;
+      gameState.currentPlayer = Player::X;
+    }
   }
 };
 
@@ -350,24 +439,7 @@ void drawXO(sf::RenderWindow &window, sf::Font &textFont,
     window.draw(Omark);
   }
 }
-Player checkForWinner(GameState &gameState) {
-  for (int i = 0; i < winConditions.size(); i++) {
-    if (gameState.Cells[winConditions[i].a] == CellState::X &&
-        gameState.Cells[winConditions[i].b] == CellState::X &&
-        gameState.Cells[winConditions[i].c] == CellState::X) {
-      {
-        return Player::X;
-      }
-    } else if (gameState.Cells[winConditions[i].a] == CellState::O &&
-               gameState.Cells[winConditions[i].b] == CellState::O &&
-               gameState.Cells[winConditions[i].c] == CellState::O) {
-      {
-        return Player::O;
-      }
-    }
-  }
-  return Player::NONE;
-}
+
 void drawGrid(sf::RenderWindow &window, sf::Font &textFont) {
   // tic  toe contour
   sf::RectangleShape countour({BOX_SIDE, BOX_SIDE});
@@ -392,10 +464,10 @@ void drawGrid(sf::RenderWindow &window, sf::Font &textFont) {
 void checkWinnerAndIncrementScore(GameState &gameState) {
 
   if (gameState.numberOfX >= 3 | gameState.numberOfO >= 3) {
-    if (checkForWinner(gameState) == Player::X) {
+    if (checkForWinner(gameState.Cells) == Player::X) {
       gameState.roundWinner = Player::X;
       gameState.score[0]++;
-    } else if (checkForWinner(gameState) == Player::O) {
+    } else if (checkForWinner(gameState.Cells) == Player::O) {
       gameState.score[1]++;
       gameState.roundWinner = Player::O;
     }
