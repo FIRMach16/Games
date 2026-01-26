@@ -12,6 +12,11 @@ FetchContent_Declare(SFML
     SYSTEM)
 FetchContent_MakeAvailable(SFML)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
-add_executable(main src/main.cpp)
-target_compile_features(main PRIVATE cxx_std_17)
-target_link_libraries(main PRIVATE SFML::Graphics)
+set(SOURCES
+    src/main.cpp
+    src/GameController.cpp
+    src/GameView.cpp
+    src/GameModel.cpp)
+add_executable(tictactoe ${SOURCES})
+target_compile_features(tictactoe PRIVATE cxx_std_17)
+target_link_libraries(tictactoe PRIVATE SFML::Graphics)

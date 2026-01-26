@@ -1,0 +1,93 @@
+#include "SharedEnums.hpp"
+#include <SFML/Graphics/Drawable.hpp>
+#include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/Text.hpp>
+#include <SFML/Graphics/Transformable.hpp>
+constexpr int WINDOW_WIDTH = 800;
+constexpr int WINDOW_HEIGHT = 600;
+constexpr float BOX_SIDE = 400.0f;
+constexpr float BOX_X_OFFSET = (WINDOW_WIDTH - BOX_SIDE) / 2.0f;
+constexpr float BOX_Y_OFFSET = (WINDOW_HEIGHT - BOX_SIDE) / 2.0f;
+constexpr float BAR_THICKNESS = 10.0f;
+// menu items will be horizantal bars
+constexpr float menuItemWidth = 400.0f;
+constexpr float menuItemHeight = 50.0f;
+constexpr float menuItemSpacing = 50.0f;
+constexpr float menuItemXOffset = 200.0f;
+constexpr float menuFirstItemYOffset = 100.0f;
+
+constexpr std::array<sf::FloatRect, 9> TTT_BOXES_BOUNDS = [] {
+  std::array<sf::FloatRect, 9> bounds = {};
+  for (int i = 0; i < 9; i++) {
+    int row = (i / 3), column = i % 3; // 4 -> row 1 column 1 we start from 0
+    bounds[i] = {{BOX_X_OFFSET + column * (BOX_SIDE / 3.0f),
+                  BOX_Y_OFFSET + row * (BOX_SIDE / 3.0f)},
+                 {BOX_SIDE / 3.0f, BOX_SIDE / 3.0f}};
+  }
+  return bounds;
+}();
+constexpr std::array<sf::FloatRect, 3> DIFFICULTY_MENU_ITEMS_BOUNDS = [] {
+  std::array<sf::FloatRect, 3> bounds = {};
+  for (int i = 0; i < 3; i++) {
+    bounds[i] = {
+        {menuItemXOffset,
+         menuFirstItemYOffset + i * (menuItemSpacing * 2 + menuItemHeight)},
+        {menuItemWidth, menuItemHeight}};
+  }
+  return bounds;
+}();
+constexpr std::array<sf::FloatRect, 4> MENU_ITEMS_BOUNDS = [] {
+  std::array<sf::FloatRect, 4> bounds = {};
+  for (int i = 0; i < 4; i++) {
+    bounds[i] = {{menuItemXOffset, menuFirstItemYOffset +
+                                       i * (menuItemSpacing + menuItemHeight)},
+                 {menuItemWidth, menuItemHeight}};
+  }
+  return bounds;
+}();
+constexpr std::array<const char *, 4> MENU_ITEMS = {
+    "Normal Mode", "Infinite Mode", "Vs Computer", "Online"};
+class CurrentView : public sf::Drawable, public sf::Transformable {
+  virtual void draw(sf::RenderTarget &target,
+                    sf::RenderStates states) const override = 0;
+
+public:
+  sf::Font textFont = sf::Font("../assets/HackNerdFontMono-Bold.ttf");
+  std::vector<sf::FloatRect> hoverableItems;
+  mutable sf::Vector2i mousePosition;
+};
+class MenuView : public CurrentView {
+  void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
+
+public:
+  std::array<sf::RectangleShape, 4> menuItemsContainers;
+  std::array<std::unique_ptr<sf::Text>, 4> menuItemsTexts;
+  MenuView();
+};
+class DifficultyView : public CurrentView {
+  void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
+};
+class TTTView : public CurrentView {
+public:
+  void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
+  TTTView(std::array<char, 9> &cells);
+
+public:
+  sf::RectangleShape rect;
+  std::array<char, 9> &cells;
+};
+
+class GameView {
+  std::array<char, 9> cells;
+  std::unique_ptr<CurrentView> currentView;
+  Mode gameMode = Mode::MENU;
+
+public:
+  GameView(std::array<char, 9> cells);
+  void setMode(Mode newMode);
+  void renderView();
+  void setView(std::unique_ptr<CurrentView> view);
+  sf::RenderWindow window;
+};
