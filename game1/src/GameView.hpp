@@ -79,6 +79,11 @@ public:
   std::array<char, 9> &cells;
 };
 
+void centerText(sf::FloatRect bounds, sf::Text &text);
+
+bool checkIfHovered(sf::Vector2i mousePosition, sf::FloatRect bounds);
+sf::RectangleShape highlighter(sf::FloatRect bounds);
+
 class GameView {
   std::array<char, 9> cells;
   std::unique_ptr<CurrentView> currentView;
@@ -89,5 +94,6 @@ public:
   void setMode(Mode newMode);
   void renderView();
   void setView(std::unique_ptr<CurrentView> view);
+  CurrentView *getCurrentView();
   sf::RenderWindow window;
 };

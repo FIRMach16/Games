@@ -35,6 +35,7 @@ void GameView::setMode(Mode newMode) { gameMode = newMode; }
 void GameView::setView(std::unique_ptr<CurrentView> view) {
   currentView = std::move(view);
 }
+CurrentView *GameView::getCurrentView() { return currentView.get(); }
 
 TTTView::TTTView(std::array<char, 9> &cells) : cells(cells) {
   rect.setSize({300, 300});
