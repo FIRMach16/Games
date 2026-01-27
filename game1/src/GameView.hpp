@@ -22,8 +22,8 @@ constexpr std::array<sf::FloatRect, 9> TTT_BOXES_BOUNDS = [] {
   std::array<sf::FloatRect, 9> bounds = {};
   for (int i = 0; i < 9; i++) {
     int row = (i / 3), column = i % 3; // 4 -> row 1 column 1 we start from 0
-    bounds[i] = {{BOX_X_OFFSET + column * (BOX_SIDE / 3.0f),
-                  BOX_Y_OFFSET + row * (BOX_SIDE / 3.0f)},
+    bounds[i] = {{BOX_X_OFFSET + column * (BOX_SIDE / 3.0f + BAR_THICKNESS),
+                  BOX_Y_OFFSET + row * (BOX_SIDE / 3.0f + BAR_THICKNESS)},
                  {BOX_SIDE / 3.0f, BOX_SIDE / 3.0f}};
   }
   return bounds;
@@ -75,7 +75,7 @@ public:
   TTTView(std::array<char, 9> &cells);
 
 public:
-  sf::RectangleShape rect;
+  std::array<sf::RectangleShape, 9> cellBoxes;
   std::array<char, 9> &cells;
 };
 

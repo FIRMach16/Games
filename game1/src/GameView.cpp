@@ -10,10 +10,10 @@ void centerText(sf::FloatRect bounds, sf::Text &text) {
                     bounds.position.y + bounds.size.y / 2.0f});
 }
 bool checkIfHovered(sf::Vector2i mousePosition, sf::FloatRect bounds) {
-  if (mousePosition.x > bounds.position.x &&
-      mousePosition.x < bounds.position.x + bounds.size.x &&
-      mousePosition.y > bounds.position.y &&
-      mousePosition.y < bounds.position.y + bounds.size.y)
+  if (mousePosition.x > bounds.position.x + BAR_THICKNESS &&
+      mousePosition.x < bounds.position.x + bounds.size.x - BAR_THICKNESS &&
+      mousePosition.y > bounds.position.y + BAR_THICKNESS &&
+      mousePosition.y < bounds.position.y + bounds.size.y - BAR_THICKNESS)
     return true;
   return false;
 }
@@ -38,12 +38,26 @@ void GameView::setView(std::unique_ptr<CurrentView> view) {
 CurrentView *GameView::getCurrentView() { return currentView.get(); }
 
 TTTView::TTTView(std::array<char, 9> &cells) : cells(cells) {
-  rect.setSize({300, 300});
-  rect.setPosition({WINDOW_WIDTH / 2 - 300 / 2, WINDOW_HEIGHT / 2 - 300 / 2});
-  rect.setFillColor(sf::Color::Red);
+  for (int i = 0; i < cellBoxes.size(); i++) {
+    cellBoxes[i].setSize(
+        {TTT_BOXES_BOUNDS[i].size.x, TTT_BOXES_BOUNDS[i].size.y});
+    cellBoxes[i].setPosition(
+        {TTT_BOXES_BOUNDS[i].position.x, TTT_BOXES_BOUNDS[i].position.y});
+    cellBoxes[i].setOutlineColor(sf::Color::Black);
+    cellBoxes[i].setOutlineThickness(BAR_THICKNESS);
+    hoverableItems.push_back(cellBoxes[i].getGlobalBounds());
+  }
 }
 void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
-  target.draw(rect);
+  sf::RenderWindow &window = static_cast<sf::RenderWindow &>(target);
+  mousePosition = sf::Mouse::getPosition(window);
+  for (sf::RectangleShape rect : cellBoxes)
+    target.draw(rect);
+  for (auto hoverableItem : hoverableItems) {
+    if (checkIfHovered(mousePosition, hoverableItem)) {
+      target.draw(highlighter(hoverableItem));
+    }
+  }
 }
 MenuView::MenuView() {
   hoverableItems.clear();
