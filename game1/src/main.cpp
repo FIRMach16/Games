@@ -17,7 +17,6 @@
 #include <array>
 #include <cmath>
 #include <experimental/random>
-#include <string>
 using namespace std;
 constexpr std::array<const char *, 3> aiDifficulties = {
     "Beginner", "Intermediate", "Expert"};
@@ -26,12 +25,12 @@ constexpr std::array<const char *, 4> menuItems = {
 
 int main() {
   std::array<char, 9> arr;
-  arr.fill('-');
+  arr.fill(emptyCellMark);
   BeginnerAiStrategy beginner;
   AiPlayer aiPlayer = AiPlayer(arr);
   aiPlayer.setStrategy(&beginner);
   GameModel gm = GameModel(aiPlayer);
-  GameView vm = GameView(arr);
+  GameView vm;
   GameController gc = GameController(gm, vm);
   gc.run();
 }

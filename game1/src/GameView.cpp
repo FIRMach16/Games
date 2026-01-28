@@ -1,5 +1,3 @@
-// will have diffrent game interace elements
-// and will use SFML Graphics
 #include "GameView.hpp"
 #include <SFML/Graphics/Font.hpp>
 #include <iostream>
@@ -25,11 +23,19 @@ sf::RectangleShape highlighter(sf::FloatRect bounds) {
   highlighter.setFillColor(sf::Color::Cyan);
   return highlighter;
 }
-
-GameView::GameView(std::array<char, 9> cells)
-    : window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "TicTacToe") {
-  this->cells = cells;
+sf::Text XOMark(char mark, sf::Font Font, sf::FloatRect bounds) {
+  sf::Text XOMark = sf::Text(Font, mark, 24);
+  centerText(bounds, XOMark);
+  if (mark == Xmark) {
+    XOMark.setFillColor(sf::Color::Blue);
+  } else if (mark == Omark) {
+    XOMark.setFillColor(sf::Color::Red);
+  }
+  return XOMark;
 }
+
+GameView::GameView()
+    : window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "TicTacToe") {}
 void GameView::renderView() { window.draw(*currentView); }
 void GameView::setMode(Mode newMode) { gameMode = newMode; }
 void GameView::setView(std::unique_ptr<CurrentView> view) {
@@ -37,7 +43,11 @@ void GameView::setView(std::unique_ptr<CurrentView> view) {
 }
 CurrentView *GameView::getCurrentView() { return currentView.get(); }
 
+void TTTView::setCells(std::array<char, 9> newCells) { cells = newCells; }
+
 TTTView::TTTView(std::array<char, 9> &cells) : cells(cells) {
+  hoverableItems.clear();
+  cells.fill(emptyCellMark);
   for (int i = 0; i < cellBoxes.size(); i++) {
     cellBoxes[i].setSize(
         {TTT_BOXES_BOUNDS[i].size.x, TTT_BOXES_BOUNDS[i].size.y});
@@ -53,10 +63,20 @@ void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
   mousePosition = sf::Mouse::getPosition(window);
   for (sf::RectangleShape rect : cellBoxes)
     target.draw(rect);
+  int idx = 0;
   for (auto hoverableItem : hoverableItems) {
-    if (checkIfHovered(mousePosition, hoverableItem)) {
+    if (checkIfHovered(mousePosition, hoverableItem) &&
+        this->cells[idx] == emptyCellMark) {
       target.draw(highlighter(hoverableItem));
     }
+    idx++;
+  }
+  idx = 0;
+  for (auto mark : cells) {
+    if (mark != emptyCellMark) {
+      target.draw(XOMark(mark, textFont, hoverableItems[idx]));
+    }
+    idx++;
   }
 }
 MenuView::MenuView() {

@@ -2,6 +2,7 @@
 #include "GameModel.hpp"
 #include <algorithm>
 #include <array>
+#include <iostream>
 #include <random>
 #include <vector>
 
@@ -9,19 +10,17 @@ GameModel::GameModel(AiPlayer aiPlayer) : aiPlayer(aiPlayer) {}
 std::array<char, 9> GameModel::getCellsState() { return this->cells; }
 void GameModel::modifyCells(int cellNumber) {
   this->cells[cellNumber] = this->currentPlayer;
+  if (currentPlayer == Xmark) {
+    currentPlayer = Omark;
+  } else {
+    currentPlayer = Xmark;
+  }
 };
+void GameModel::resetBoard() { cells.fill(emptyCellMark); }
 void AiPlayer::setStrategy(AiPlayerStrategy *strategy) {
   this->strategy = strategy;
 }
 AiPlayer::AiPlayer(std::array<char, 9> arr) { this->cells = arr; }
-// void GameModel::notify() {
-//   for (GameStateObserver observer : this->observers) {
-//     observer.update();
-//   }
-// };
-// void GameModel::add(GameStateObserver observer) {
-//   this->observers.push_back(observer);
-// }
 
 void BeginnerAiStrategy::play(std::array<char, 9> &cells) {
   if (currentPlayer == Omark) {

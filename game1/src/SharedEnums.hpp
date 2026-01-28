@@ -10,4 +10,8 @@ enum class Mode {
   VS_COMPUTER,
   ONLINE // upcoming
 }; // TTT means TicTacToe;
+
+constexpr char Omark = 'O';
+constexpr char Xmark = 'X';
+constexpr char emptyCellMark = '-';
 #endif

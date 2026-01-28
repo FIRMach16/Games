@@ -3,17 +3,14 @@
 #include <vector>
 // class GameStateObserver {
 // public:
-//   virtual void update();
+//   virtual void update() = 0;
 // };
 // class GameStateObservable {
-//   virtual void add(GameStateObserver obs);
-//   virtual void remove(GameStateObserver obs);
-//   virtual void notify();
+//   virtual void add(GameStateObserver obs) = 0;
+//   virtual void remove(GameStateObserver obs) = 0;
+//   virtual void notify() = 0;
 // };
 //
-constexpr char Omark = 'O';
-constexpr char Xmark = 'X';
-constexpr char emptyCellMark = '-';
 struct Line {
   int a, b, c;
 };
@@ -73,12 +70,13 @@ class GameModel {
   std::array<char, 9> cells = {emptyCellMark, emptyCellMark, emptyCellMark,
                                emptyCellMark, emptyCellMark, emptyCellMark,
                                emptyCellMark, emptyCellMark, emptyCellMark};
-  char currentPlayer;
+  char currentPlayer = Xmark;
   AiPlayer aiPlayer;
   Mode appMode;
 
 public:
   std::array<char, 9> getCellsState();
+  void resetBoard();
   void modifyCells(int cellNumber);
   GameModel(AiPlayer aiPlayer);
 };

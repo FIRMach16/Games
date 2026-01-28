@@ -70,27 +70,28 @@ class DifficultyView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
 };
 class TTTView : public CurrentView {
-public:
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
-  TTTView(std::array<char, 9> &cells);
+  bool gameOver = false;
 
 public:
+  TTTView(std::array<char, 9> &cells);
   std::array<sf::RectangleShape, 9> cellBoxes;
-  std::array<char, 9> &cells;
+  std::array<char, 9> cells;
+  void setCells(std::array<char, 9> newCells);
+  void resetGame();
 };
 
 void centerText(sf::FloatRect bounds, sf::Text &text);
-
 bool checkIfHovered(sf::Vector2i mousePosition, sf::FloatRect bounds);
 sf::RectangleShape highlighter(sf::FloatRect bounds);
+sf::Text XOMark(char mark, sf::Font Font, sf::FloatRect &bounds);
 
 class GameView {
-  std::array<char, 9> cells;
   std::unique_ptr<CurrentView> currentView;
   Mode gameMode = Mode::MENU;
 
 public:
-  GameView(std::array<char, 9> cells);
+  GameView();
   void setMode(Mode newMode);
   void renderView();
   void setView(std::unique_ptr<CurrentView> view);
