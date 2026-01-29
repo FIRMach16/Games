@@ -78,5 +78,6 @@ public:
   std::array<char, 9> getCellsState();
   void resetBoard();
   void modifyCells(int cellNumber);
+  char checkWinner();
   GameModel(AiPlayer aiPlayer);
 };

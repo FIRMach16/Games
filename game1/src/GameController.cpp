@@ -3,24 +3,25 @@
 // #include <iostream>
 void handleMouseClick(GameView &vm, GameModel &gm) {
   if (auto *currentView = vm.getCurrentView()) {
-    if (auto *currentView = dynamic_cast<MenuView *>(vm.getCurrentView())) {
-      for (auto bounds : currentView->hoverableItems) {
-        if (checkIfHovered(currentView->mousePosition, bounds)) {
+    if (auto *menuView = dynamic_cast<MenuView *>(vm.getCurrentView())) {
+      for (auto bounds : menuView->hoverableItems) {
+        if (checkIfHovered(menuView->mousePosition, bounds)) {
           std::array<char, 9> cells;
           cells.fill(emptyCellMark);
           vm.setView(std::make_unique<TTTView>(cells));
         }
       }
-    } else if (auto *currentView =
-                   dynamic_cast<TTTView *>(vm.getCurrentView())) {
-      auto hoverableItems = currentView->hoverableItems;
+    } else if (auto *tttView = dynamic_cast<TTTView *>(vm.getCurrentView())) {
+      auto hoverableItems = tttView->hoverableItems;
       for (int i = 0; i < hoverableItems.size(); i++) {
-        if (checkIfHovered(currentView->mousePosition, hoverableItems[i])) {
+        if (checkIfHovered(tttView->mousePosition, hoverableItems[i]) &&
+            gm.checkWinner() == emptyCellMark) {
           if (gm.getCellsState()[i] == emptyCellMark)
             gm.modifyCells(i);
         }
       }
-      currentView->setCells(gm.getCellsState());
+      tttView->setCells(gm.getCellsState());
+      tttView->determinWinner(gm.checkWinner());
     }
   }
 }
@@ -35,7 +36,7 @@ void GameController::run() {
         if (auto *tempview = dynamic_cast<TTTView *>(vm.getCurrentView()))
           if (keyPressed->scancode == sf::Keyboard::Scancode::R) {
             gm.resetBoard();
-            tempview->setCells(gm.getCellsState());
+            tempview->resetGame();
           }
       } else if (const auto *mouseClicked =
                      event->getIf<sf::Event::MouseButtonPressed>()) {

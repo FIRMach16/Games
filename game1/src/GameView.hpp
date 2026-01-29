@@ -49,6 +49,10 @@ constexpr std::array<sf::FloatRect, 4> MENU_ITEMS_BOUNDS = [] {
 }();
 constexpr std::array<const char *, 4> MENU_ITEMS = {
     "Normal Mode", "Infinite Mode", "Vs Computer", "Online"};
+constexpr std::array<sf::FloatRect, 3> UPPER_TEXT_ZONES = {
+    sf::FloatRect({0, 0}, {BOX_X_OFFSET, BOX_Y_OFFSET}),
+    sf::FloatRect({BOX_X_OFFSET, 0}, {BOX_SIDE, BOX_Y_OFFSET}),
+    sf::FloatRect({BOX_SIDE + BOX_X_OFFSET, 0}, {BOX_X_OFFSET, BOX_Y_OFFSET})};
 class CurrentView : public sf::Drawable, public sf::Transformable {
   virtual void draw(sf::RenderTarget &target,
                     sf::RenderStates states) const override = 0;
@@ -72,6 +76,7 @@ class DifficultyView : public CurrentView {
 class TTTView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
   bool gameOver = false;
+  char winner = emptyCellMark;
 
 public:
   TTTView(std::array<char, 9> &cells);
@@ -79,6 +84,7 @@ public:
   std::array<char, 9> cells;
   void setCells(std::array<char, 9> newCells);
   void resetGame();
+  void determinWinner(char mark);
 };
 
 void centerText(sf::FloatRect bounds, sf::Text &text);

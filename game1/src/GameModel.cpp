@@ -17,6 +17,16 @@ void GameModel::modifyCells(int cellNumber) {
   }
 };
 void GameModel::resetBoard() { cells.fill(emptyCellMark); }
+char GameModel::checkWinner() {
+  auto tmp = checkForWinner(cells);
+  if (tmp == emptyCellMark) {
+    return emptyCellMark;
+  } else if (tmp == Xmark) {
+    return Xmark;
+  } else {
+    return Omark;
+  }
+}
 void AiPlayer::setStrategy(AiPlayerStrategy *strategy) {
   this->strategy = strategy;
 }

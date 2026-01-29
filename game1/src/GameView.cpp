@@ -25,6 +25,7 @@ sf::RectangleShape highlighter(sf::FloatRect bounds) {
 }
 sf::Text XOMark(char mark, sf::Font Font, sf::FloatRect bounds) {
   sf::Text XOMark = sf::Text(Font, mark, 24);
+
   centerText(bounds, XOMark);
   if (mark == Xmark) {
     XOMark.setFillColor(sf::Color::Blue);
@@ -32,6 +33,20 @@ sf::Text XOMark(char mark, sf::Font Font, sf::FloatRect bounds) {
     XOMark.setFillColor(sf::Color::Red);
   }
   return XOMark;
+}
+sf::Text WinText(char mark, sf::Font Font) {
+
+  sf::Text winMsg = sf::Text(Font);
+  if (mark == Xmark) {
+    winMsg.setString("X wins! press (r) to replay.");
+    winMsg.setFillColor(sf::Color::Blue);
+  } else if (mark == Omark) {
+    winMsg.setString("O wins! press (r) to replay.");
+    winMsg.setFillColor(sf::Color::Red);
+  }
+  winMsg.setCharacterSize(24);
+  centerText(UPPER_TEXT_ZONES[1], winMsg);
+  return winMsg;
 }
 
 GameView::GameView()
@@ -42,9 +57,18 @@ void GameView::setView(std::unique_ptr<CurrentView> view) {
   currentView = std::move(view);
 }
 CurrentView *GameView::getCurrentView() { return currentView.get(); }
-
+void TTTView::resetGame() {
+  gameOver = false;
+  winner = emptyCellMark;
+  cells.fill(emptyCellMark);
+}
 void TTTView::setCells(std::array<char, 9> newCells) { cells = newCells; }
-
+void TTTView::determinWinner(char mark) {
+  if (mark != emptyCellMark) {
+    gameOver = true;
+    winner = mark;
+  }
+}
 TTTView::TTTView(std::array<char, 9> &cells) : cells(cells) {
   hoverableItems.clear();
   cells.fill(emptyCellMark);
@@ -66,10 +90,13 @@ void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
   int idx = 0;
   for (auto hoverableItem : hoverableItems) {
     if (checkIfHovered(mousePosition, hoverableItem) &&
-        this->cells[idx] == emptyCellMark) {
+        this->cells[idx] == emptyCellMark && !gameOver) {
       target.draw(highlighter(hoverableItem));
     }
     idx++;
+  }
+  if (gameOver && winner != emptyCellMark) {
+    target.draw(WinText(winner, textFont));
   }
   idx = 0;
   for (auto mark : cells) {
