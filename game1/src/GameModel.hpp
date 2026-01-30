@@ -74,6 +74,7 @@ class GameModel {
   AiPlayer aiPlayer;
   Mode appMode;
   std::array<int, 2> score;
+  std::vector<int> orderOfMoves;
 
 public:
   std::array<char, 9> getCellsState();
@@ -84,4 +85,7 @@ public:
   char checkWinner();
   std::array<int, 2> getScore();
   GameModel(AiPlayer aiPlayer);
+  // want to avoid having gm.appMode == Mode::... in GameController
+  bool is2player();
+  bool isGame();
 };

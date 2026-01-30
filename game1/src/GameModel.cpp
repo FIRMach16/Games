@@ -9,14 +9,35 @@
 GameModel::GameModel(AiPlayer aiPlayer) : aiPlayer(aiPlayer) {}
 std::array<char, 9> GameModel::getCellsState() { return this->cells; }
 void GameModel::modifyCells(int cellNumber) {
-  this->cells[cellNumber] = this->currentPlayer;
-  if (currentPlayer == Xmark) {
-    currentPlayer = Omark;
-  } else {
-    currentPlayer = Xmark;
+  if (is2player()) {
+    if (appMode == Mode::NORMAL_TTT) {
+      cells[cellNumber] = currentPlayer;
+      if (currentPlayer == Xmark) {
+        currentPlayer = Omark;
+      } else {
+        currentPlayer = Xmark;
+      }
+    } else if (appMode == Mode::INFINITE_TTT) {
+      orderOfMoves.push_back(cellNumber);
+      cells[cellNumber] = currentPlayer;
+      if (currentPlayer == Xmark) {
+        currentPlayer = Omark;
+      } else {
+        currentPlayer = Xmark;
+      }
+
+      if (orderOfMoves.size() == 7) {
+        cells[orderOfMoves[0]] = emptyCellMark;
+        orderOfMoves.erase(orderOfMoves.begin());
+      }
+    }
   }
 };
-void GameModel::resetBoard() { cells.fill(emptyCellMark); }
+void GameModel::resetBoard() {
+  orderOfMoves.clear();
+  cells.fill(emptyCellMark);
+}
+
 char GameModel::checkWinner() {
   auto tmp = checkForWinner(cells);
   if (tmp == emptyCellMark) {
@@ -32,6 +53,8 @@ char GameModel::checkWinner() {
 void GameModel::setGameMode(Mode newMode) { appMode = newMode; }
 void GameModel::resetScore() { score.fill(0); }
 std::array<int, 2> GameModel::getScore() { return score; }
+bool GameModel::isGame() { return appMode == Mode::MENU; }
+bool GameModel::is2player() { return appMode != Mode::VS_COMPUTER; }
 void AiPlayer::setStrategy(AiPlayerStrategy *strategy) {
   this->strategy = strategy;
 }

@@ -50,6 +50,9 @@ void GameController::run() {
       }
     }
     vm.window.clear(sf::Color::White);
+    if (gm.isGame() && !gm.is2player()) {
+      // computer play
+    }
     vm.renderView();
     vm.window.display();
   }
