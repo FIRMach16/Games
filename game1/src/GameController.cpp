@@ -4,12 +4,17 @@
 void handleMouseClick(GameView &vm, GameModel &gm) {
   if (auto *currentView = vm.getCurrentView()) {
     if (auto *menuView = dynamic_cast<MenuView *>(vm.getCurrentView())) {
+      int idx = 0;
       for (auto bounds : menuView->hoverableItems) {
+
         if (checkIfHovered(menuView->mousePosition, bounds)) {
           std::array<char, 9> cells;
           cells.fill(emptyCellMark);
           vm.setView(std::make_unique<TTTView>(cells));
+          gm.setGameMode(MENU_MODES[idx]);
+          gm.resetScore();
         }
+        idx++;
       }
     } else if (auto *tttView = dynamic_cast<TTTView *>(vm.getCurrentView())) {
       auto hoverableItems = tttView->hoverableItems;
@@ -22,6 +27,7 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
       }
       tttView->setCells(gm.getCellsState());
       tttView->determinWinner(gm.checkWinner());
+      tttView->setScore(gm.getScore());
     }
   }
 }

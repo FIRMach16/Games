@@ -22,11 +22,16 @@ char GameModel::checkWinner() {
   if (tmp == emptyCellMark) {
     return emptyCellMark;
   } else if (tmp == Xmark) {
+    score[0]++;
     return Xmark;
   } else {
+    score[1]++;
     return Omark;
   }
 }
+void GameModel::setGameMode(Mode newMode) { appMode = newMode; }
+void GameModel::resetScore() { score.fill(0); }
+std::array<int, 2> GameModel::getScore() { return score; }
 void AiPlayer::setStrategy(AiPlayerStrategy *strategy) {
   this->strategy = strategy;
 }

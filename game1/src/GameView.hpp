@@ -53,6 +53,19 @@ constexpr std::array<sf::FloatRect, 3> UPPER_TEXT_ZONES = {
     sf::FloatRect({0, 0}, {BOX_X_OFFSET, BOX_Y_OFFSET}),
     sf::FloatRect({BOX_X_OFFSET, 0}, {BOX_SIDE, BOX_Y_OFFSET}),
     sf::FloatRect({BOX_SIDE + BOX_X_OFFSET, 0}, {BOX_X_OFFSET, BOX_Y_OFFSET})};
+constexpr std::array<sf::FloatRect, 9> THIRDS_OF_UPPER_TEXT_ZONES = [] {
+  std::array<sf::FloatRect, 9> bounds = {};
+  for (int partitionNum = 0; partitionNum < 9; partitionNum++) {
+    int column = partitionNum / 3;
+    int row = partitionNum % 3;
+    auto concernedColumn = UPPER_TEXT_ZONES[column];
+    bounds[partitionNum] = {
+        {concernedColumn.position.x,
+         concernedColumn.position.y + row * (concernedColumn.size.y / 3)},
+        {concernedColumn.size.x, concernedColumn.size.y / 3}};
+  }
+  return bounds;
+}();
 class CurrentView : public sf::Drawable, public sf::Transformable {
   virtual void draw(sf::RenderTarget &target,
                     sf::RenderStates states) const override = 0;
@@ -77,13 +90,15 @@ class TTTView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
   bool gameOver = false;
   char winner = emptyCellMark;
+  std::array<int, 2> score = {0, 0};
+  std::array<char, 9> cells;
 
 public:
   TTTView(std::array<char, 9> &cells);
   std::array<sf::RectangleShape, 9> cellBoxes;
-  std::array<char, 9> cells;
   void setCells(std::array<char, 9> newCells);
   void resetGame();
+  void setScore(std::array<int, 2> newScore);
   void determinWinner(char mark);
 };
 

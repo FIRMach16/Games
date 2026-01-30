@@ -73,11 +73,15 @@ class GameModel {
   char currentPlayer = Xmark;
   AiPlayer aiPlayer;
   Mode appMode;
+  std::array<int, 2> score;
 
 public:
   std::array<char, 9> getCellsState();
   void resetBoard();
+  void resetScore();
   void modifyCells(int cellNumber);
+  void setGameMode(Mode newMode);
   char checkWinner();
+  std::array<int, 2> getScore();
   GameModel(AiPlayer aiPlayer);
 };

@@ -23,7 +23,7 @@ sf::RectangleShape highlighter(sf::FloatRect bounds) {
   highlighter.setFillColor(sf::Color::Cyan);
   return highlighter;
 }
-sf::Text XOMark(char mark, sf::Font Font, sf::FloatRect bounds) {
+sf::Text XOMark(char mark, const sf::Font &Font, sf::FloatRect bounds) {
   sf::Text XOMark = sf::Text(Font, mark, 24);
 
   centerText(bounds, XOMark);
@@ -34,7 +34,7 @@ sf::Text XOMark(char mark, sf::Font Font, sf::FloatRect bounds) {
   }
   return XOMark;
 }
-sf::Text WinText(char mark, sf::Font Font) {
+sf::Text WinText(char mark, const sf::Font &Font) {
 
   sf::Text winMsg = sf::Text(Font);
   if (mark == Xmark) {
@@ -48,7 +48,19 @@ sf::Text WinText(char mark, sf::Font Font) {
   centerText(UPPER_TEXT_ZONES[1], winMsg);
   return winMsg;
 }
+std::array<sf::Text, 2> scoreText(std::array<int, 2> score,
+                                  const sf::Font &Font) {
+  sf::Text headerText = sf::Text(Font, "X   O", 24);
+  headerText.setFillColor(sf::Color::Black);
+  centerText(THIRDS_OF_UPPER_TEXT_ZONES[6], headerText);
+  sf::Text scoreText = sf::Text(
+      Font, std::to_string(score[0]) + " - " + std::to_string(score[1]), 24);
 
+  scoreText.setFillColor(sf::Color::Black);
+  centerText(THIRDS_OF_UPPER_TEXT_ZONES[7], scoreText);
+  std::array<sf::Text, 2> array = {headerText, scoreText};
+  return array;
+}
 GameView::GameView()
     : window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "TicTacToe") {}
 void GameView::renderView() { window.draw(*currentView); }
@@ -62,6 +74,7 @@ void TTTView::resetGame() {
   winner = emptyCellMark;
   cells.fill(emptyCellMark);
 }
+void TTTView::setScore(std::array<int, 2> newScore) { score = newScore; }
 void TTTView::setCells(std::array<char, 9> newCells) { cells = newCells; }
 void TTTView::determinWinner(char mark) {
   if (mark != emptyCellMark) {
@@ -96,6 +109,7 @@ void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
     idx++;
   }
   if (gameOver && winner != emptyCellMark) {
+
     target.draw(WinText(winner, textFont));
   }
   idx = 0;
@@ -104,6 +118,9 @@ void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
       target.draw(XOMark(mark, textFont, hoverableItems[idx]));
     }
     idx++;
+  }
+  for (auto text : scoreText(score, textFont)) {
+    target.draw(text);
   }
 }
 MenuView::MenuView() {
