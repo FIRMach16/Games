@@ -6,11 +6,14 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
     if (auto *menuView = dynamic_cast<MenuView *>(vm.getCurrentView())) {
       int idx = 0;
       for (auto bounds : menuView->hoverableItems) {
-
         if (checkIfHovered(menuView->mousePosition, bounds)) {
           std::array<char, 9> cells;
           cells.fill(emptyCellMark);
-          vm.setView(std::make_unique<TTTView>(cells));
+          if (idx != 2) {
+            vm.setView(std::make_unique<TTTView>(cells));
+          } else {
+            vm.setView(std::make_unique<DifficultyView>());
+          }
           gm.setGameMode(MENU_MODES[idx]);
           gm.resetScore();
         }
@@ -28,6 +31,26 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
       tttView->setCells(gm.getCellsState());
       tttView->determinWinner(gm.checkWinner());
       tttView->setScore(gm.getScore());
+    } else if (auto *difficultyView =
+                   dynamic_cast<DifficultyView *>(vm.getCurrentView())) {
+      int idx = 0;
+      for (auto bounds : difficultyView->hoverableItems) {
+
+        if (checkIfHovered(difficultyView->mousePosition, bounds)) {
+          std::array<char, 9> cells;
+          cells.fill(emptyCellMark);
+
+          vm.setView(std::make_unique<TTTView>(cells));
+          gm.resetScore();
+          if (idx == 0)
+            gm.setPlayStrategy(new BeginnerAiStrategy());
+          else if (idx == 1)
+            gm.setPlayStrategy(new IntermediateAiStrategy());
+          else if (idx == 2)
+            gm.setPlayStrategy(new ExpertAiStrategy());
+        }
+        idx++;
+      }
     }
   }
 }
@@ -45,6 +68,9 @@ void GameController::run() {
             gm.resetBoard();
             tempview->resetGame();
           }
+        if (keyPressed->scancode == sf::Keyboard::Scancode::M) {
+          vm.setView(std::make_unique<MenuView>());
+        }
       } else if (const auto *mouseClicked =
                      event->getIf<sf::Event::MouseButtonPressed>()) {
         handleMouseClick(vm, gm);

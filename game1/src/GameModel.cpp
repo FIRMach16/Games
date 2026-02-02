@@ -78,6 +78,7 @@ char GameModel::checkWinner() {
 void GameModel::setGameMode(Mode newMode) { appMode = newMode; }
 void GameModel::resetScore() {
   rounds = 0;
+  cells->fill(emptyCellMark);
   score.fill(0);
   currentPlayer = Xmark;
 }

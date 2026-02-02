@@ -125,25 +125,25 @@ void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
 }
 MenuView::MenuView() {
   hoverableItems.clear();
-  for (int i = 0; i < menuItemsContainers.size(); i++) {
-    menuItemsContainers[i].setSize({menuItemWidth, menuItemHeight});
-    menuItemsContainers[i].setPosition(
+  for (int i = 0; i < mainMenuItemsContainers.size(); i++) {
+    mainMenuItemsContainers[i].setSize({menuItemWidth, menuItemHeight});
+    mainMenuItemsContainers[i].setPosition(
         {menuItemXOffset,
          menuFirstItemYOffset + i * (menuItemHeight + menuItemSpacing)});
-    menuItemsContainers[i].setOutlineColor(sf::Color::Black);
-    menuItemsContainers[i].setOutlineThickness(BAR_THICKNESS);
+    mainMenuItemsContainers[i].setOutlineColor(sf::Color::Black);
+    mainMenuItemsContainers[i].setOutlineThickness(BAR_THICKNESS);
 
     menuItemsTexts[i] = std::make_unique<sf::Text>(textFont, MENU_ITEMS[i], 24);
     auto &text = *menuItemsTexts[i];
     text.setFillColor(sf::Color::Black);
-    centerText(menuItemsContainers[i].getGlobalBounds(), text);
-    hoverableItems.push_back({menuItemsContainers[i].getGlobalBounds()});
+    centerText(mainMenuItemsContainers[i].getGlobalBounds(), text);
+    hoverableItems.push_back({mainMenuItemsContainers[i].getGlobalBounds()});
   }
 }
 void MenuView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
   sf::RenderWindow &window = static_cast<sf::RenderWindow &>(target);
   mousePosition = sf::Mouse::getPosition(window);
-  for (sf::RectangleShape rect : menuItemsContainers)
+  for (sf::RectangleShape rect : mainMenuItemsContainers)
     target.draw(rect);
   for (auto hoverableItem : hoverableItems) {
     if (checkIfHovered(mousePosition, hoverableItem)) {
@@ -151,6 +151,42 @@ void MenuView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
     }
   }
   for (auto &text : menuItemsTexts) {
+    target.draw(*text);
+  }
+}
+
+DifficultyView::DifficultyView() {
+  hoverableItems.clear();
+  for (int i = 0; i < dificultyMenuItemsContainers.size(); i++) {
+    dificultyMenuItemsContainers[i].setSize({menuItemWidth, menuItemHeight});
+    dificultyMenuItemsContainers[i].setPosition(
+        {menuItemXOffset,
+         menuFirstItemYOffset + i * (menuItemHeight + menuItemSpacing)});
+    dificultyMenuItemsContainers[i].setOutlineColor(sf::Color::Black);
+    dificultyMenuItemsContainers[i].setOutlineThickness(BAR_THICKNESS);
+
+    dificultyMenuItemsTexts[i] =
+        std::make_unique<sf::Text>(textFont, DIFFICULTY_MENU_ITEMS[i], 24);
+    auto &text = *dificultyMenuItemsTexts[i];
+    text.setFillColor(sf::Color::Black);
+    centerText(dificultyMenuItemsContainers[i].getGlobalBounds(), text);
+    hoverableItems.push_back(
+        {dificultyMenuItemsContainers[i].getGlobalBounds()});
+  }
+}
+
+void DifficultyView::draw(sf::RenderTarget &target,
+                          sf::RenderStates states) const {
+  sf::RenderWindow &window = static_cast<sf::RenderWindow &>(target);
+  mousePosition = sf::Mouse::getPosition(window);
+  for (sf::RectangleShape rect : dificultyMenuItemsContainers)
+    target.draw(rect);
+  for (auto hoverableItem : hoverableItems) {
+    if (checkIfHovered(mousePosition, hoverableItem)) {
+      target.draw(highlighter(hoverableItem));
+    }
+  }
+  for (auto &text : dificultyMenuItemsTexts) {
     target.draw(*text);
   }
 }

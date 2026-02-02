@@ -49,6 +49,8 @@ constexpr std::array<sf::FloatRect, 4> MENU_ITEMS_BOUNDS = [] {
 }();
 constexpr std::array<const char *, 4> MENU_ITEMS = {
     "Normal Mode", "Infinite Mode", "Vs Computer", "Online"};
+constexpr std::array<const char *, 3> DIFFICULTY_MENU_ITEMS = {
+    "Beginner", "Intermediate", "Expert"};
 constexpr std::array<sf::FloatRect, 3> UPPER_TEXT_ZONES = {
     sf::FloatRect({0, 0}, {BOX_X_OFFSET, BOX_Y_OFFSET}),
     sf::FloatRect({BOX_X_OFFSET, 0}, {BOX_SIDE, BOX_Y_OFFSET}),
@@ -66,6 +68,7 @@ constexpr std::array<sf::FloatRect, 9> THIRDS_OF_UPPER_TEXT_ZONES = [] {
   }
   return bounds;
 }();
+
 class CurrentView : public sf::Drawable, public sf::Transformable {
   virtual void draw(sf::RenderTarget &target,
                     sf::RenderStates states) const override = 0;
@@ -79,12 +82,17 @@ class MenuView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
 
 public:
-  std::array<sf::RectangleShape, 4> menuItemsContainers;
+  std::array<sf::RectangleShape, 4> mainMenuItemsContainers;
   std::array<std::unique_ptr<sf::Text>, 4> menuItemsTexts;
   MenuView();
 };
 class DifficultyView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
+
+public:
+  std::array<sf::RectangleShape, 3> dificultyMenuItemsContainers;
+  std::array<std::unique_ptr<sf::Text>, 3> dificultyMenuItemsTexts;
+  DifficultyView();
 };
 class TTTView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
