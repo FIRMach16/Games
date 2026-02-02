@@ -24,12 +24,7 @@ constexpr std::array<const char *, 4> menuItems = {
     "Normal TicTacToe", "Infite TicTacToe", "VsComputer", "Online"};
 
 int main() {
-  std::array<char, 9> arr;
-  arr.fill(emptyCellMark);
-  BeginnerAiStrategy beginner;
-  AiPlayer aiPlayer = AiPlayer(arr);
-  aiPlayer.setStrategy(&beginner);
-  GameModel gm = GameModel(aiPlayer);
+  GameModel gm = GameModel();
   GameView vm;
   GameController gc = GameController(gm, vm);
   gc.run();

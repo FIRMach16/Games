@@ -1,5 +1,6 @@
 #include "SharedEnums.hpp"
 #include <array>
+#include <memory>
 #include <vector>
 // class GameStateObserver {
 // public:
@@ -14,6 +15,9 @@
 struct Line {
   int a, b, c;
 };
+const std::array<char, 9> initCells = {
+    emptyCellMark, emptyCellMark, emptyCellMark, emptyCellMark, emptyCellMark,
+    emptyCellMark, emptyCellMark, emptyCellMark, emptyCellMark};
 const std::vector<Line> winConditions{{0, 1, 2}, {3, 4, 5}, {6, 7, 8},
                                       {0, 3, 6}, {1, 4, 7}, {2, 5, 8},
                                       {0, 4, 8}, {2, 4, 6}};
@@ -26,7 +30,7 @@ constexpr std::array<AiDifficulty, 3> AI_DIFFICULTIES_MODE = {
 
 char checkForWinner(std::array<char, 9> cells);
 int findWinningMove(std::array<char, 9> cells, char mark);
-void randomMove(std::array<char, 9> cells, std::vector<int> &emptyCells);
+int randomMove(std::array<char, 9> &cells, std::vector<int> &emptyCells);
 std::vector<int> findEmptyCells(std::array<char, 9> cells);
 
 int evaluateBoard(std::array<char, 9> cells);
@@ -34,11 +38,8 @@ bool gameOver(std::array<char, 9> cells);
 int minmaxingTTT(std::array<char, 9> cells, int depth, int alpha, int beta,
                  bool maximizingPlayer);
 class AiPlayerStrategy {
-
+public:
   virtual void play(std::array<char, 9> &cells) = 0;
-
-protected:
-  char currentPlayer;
 };
 class ExpertAiStrategy : public AiPlayerStrategy {
 public:
@@ -55,22 +56,22 @@ public:
 class NoPlayStrategy : public AiPlayerStrategy {
 public:
   void play(std::array<char, 9> &cells) override {}
-  void updateCurrentPlayer();
 };
 
 class AiPlayer {
-  std::array<char, 9> cells;
+  std::shared_ptr<std::array<char, 9>> cells;
   AiPlayerStrategy *strategy = new NoPlayStrategy();
 
 public:
-  AiPlayer(std::array<char, 9> arr);
+  AiPlayer(std::shared_ptr<std::array<char, 9>> arr);
   void setStrategy(AiPlayerStrategy *strategy);
+  void play();
 };
 class GameModel {
-  std::array<char, 9> cells = {emptyCellMark, emptyCellMark, emptyCellMark,
-                               emptyCellMark, emptyCellMark, emptyCellMark,
-                               emptyCellMark, emptyCellMark, emptyCellMark};
+  std::shared_ptr<std::array<char, 9>> cells;
   char currentPlayer = Xmark;
+  char computerPlayer = Omark; // stay fixed during rounds of VS_COMPUTER game
+  int rounds = 0;
   AiPlayer aiPlayer;
   Mode appMode;
   std::array<int, 2> score;
@@ -83,9 +84,12 @@ public:
   void modifyCells(int cellNumber);
   void setGameMode(Mode newMode);
   char checkWinner();
+  void setPlayStrategy(AiPlayerStrategy *strategy);
+  void setComputerPlayer(char newComputerPlayer);
   std::array<int, 2> getScore();
-  GameModel(AiPlayer aiPlayer);
+  GameModel();
   // want to avoid having gm.appMode == Mode::... in GameController
   bool is2player();
   bool isGame();
+  bool computerTurn();
 };

@@ -1,6 +1,6 @@
 // will handle user inputs and will be entry point
 #include "GameController.hpp"
-// #include <iostream>
+#include <iostream>
 void handleMouseClick(GameView &vm, GameModel &gm) {
   if (auto *currentView = vm.getCurrentView()) {
     if (auto *menuView = dynamic_cast<MenuView *>(vm.getCurrentView())) {
@@ -21,7 +21,7 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
       for (int i = 0; i < hoverableItems.size(); i++) {
         if (checkIfHovered(tttView->mousePosition, hoverableItems[i]) &&
             gm.checkWinner() == emptyCellMark) {
-          if (gm.getCellsState()[i] == emptyCellMark)
+          if (gm.getCellsState()[i] == emptyCellMark && !gm.computerTurn())
             gm.modifyCells(i);
         }
       }
@@ -33,6 +33,7 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
 }
 void GameController::run() {
   vm.setView(std::make_unique<MenuView>());
+  gm.setPlayStrategy(new ExpertAiStrategy());
   while (vm.window.isOpen()) {
     while (const std::optional event = vm.window.pollEvent()) {
       // "close requested" event: we close the window
@@ -50,10 +51,15 @@ void GameController::run() {
       }
     }
     vm.window.clear(sf::Color::White);
-    if (gm.isGame() && !gm.is2player()) {
-      // computer play
-    }
     vm.renderView();
+    if (gm.computerTurn()) {
+      gm.modifyCells(-1);
+      if (auto *tttView = dynamic_cast<TTTView *>(vm.getCurrentView())) {
+        tttView->setCells(gm.getCellsState());
+        tttView->determinWinner(gm.checkWinner());
+        tttView->setScore(gm.getScore());
+      }
+    }
     vm.window.display();
   }
 }
