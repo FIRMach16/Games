@@ -38,8 +38,7 @@ void GameModel::modifyCells(int cellNumber) {
       } else {
         currentPlayer = Xmark;
       }
-    } else if (currentPlayer != computerPlayer &&
-               currentPlayer != emptyCellMark) {
+    } else if (currentPlayer != emptyCellMark) {
 
       if (cellNumber != -1) {
 

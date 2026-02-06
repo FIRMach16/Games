@@ -74,6 +74,8 @@ class CurrentView : public sf::Drawable, public sf::Transformable {
                     sf::RenderStates states) const override = 0;
 
 public:
+  virtual void update(std::array<char, 9> const &cells, char const &winner,
+                      std::array<int, 2> const &score) = 0;
   sf::Font textFont = sf::Font("../assets/HackNerdFontMono-Bold.ttf");
   std::vector<sf::FloatRect> hoverableItems;
   mutable sf::Vector2i mousePosition;
@@ -82,6 +84,8 @@ class MenuView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
 
 public:
+  void update(const std::array<char, 9> &cells, const char &winner,
+              const std::array<int, 2> &score) override;
   std::array<sf::RectangleShape, 4> mainMenuItemsContainers;
   std::array<std::unique_ptr<sf::Text>, 4> menuItemsTexts;
   MenuView();
@@ -90,6 +94,8 @@ class DifficultyView : public CurrentView {
   void draw(sf::RenderTarget &target, sf::RenderStates states) const override;
 
 public:
+  void update(const std::array<char, 9> &cells, const char &winner,
+              const std::array<int, 2> &score) override;
   std::array<sf::RectangleShape, 3> dificultyMenuItemsContainers;
   std::array<std::unique_ptr<sf::Text>, 3> dificultyMenuItemsTexts;
   DifficultyView();
@@ -102,6 +108,8 @@ class TTTView : public CurrentView {
   std::array<char, 9> cells;
 
 public:
+  void update(const std::array<char, 9> &cells, const char &winner,
+              const std::array<int, 2> &score) override;
   TTTView(std::array<char, 9> &cells);
   std::array<sf::RectangleShape, 9> cellBoxes;
   void setCells(std::array<char, 9> newCells);
@@ -121,7 +129,6 @@ class GameView {
 
 public:
   GameView();
-  void setMode(Mode newMode);
   void renderView();
   void setView(std::unique_ptr<CurrentView> view);
   CurrentView *getCurrentView();

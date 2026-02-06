@@ -3,7 +3,7 @@
 #include <iostream>
 void handleMouseClick(GameView &vm, GameModel &gm) {
   if (auto *currentView = vm.getCurrentView()) {
-    if (auto *menuView = dynamic_cast<MenuView *>(vm.getCurrentView())) {
+    if (auto *menuView = dynamic_cast<MenuView *>(currentView)) {
       int idx = 0;
       for (auto bounds : menuView->hoverableItems) {
         if (checkIfHovered(menuView->mousePosition, bounds)) {
@@ -19,7 +19,7 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
         }
         idx++;
       }
-    } else if (auto *tttView = dynamic_cast<TTTView *>(vm.getCurrentView())) {
+    } else if (auto *tttView = dynamic_cast<TTTView *>(currentView)) {
       auto hoverableItems = tttView->hoverableItems;
       for (int i = 0; i < hoverableItems.size(); i++) {
         if (checkIfHovered(tttView->mousePosition, hoverableItems[i]) &&
@@ -28,11 +28,12 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
             gm.modifyCells(i);
         }
       }
-      tttView->setCells(gm.getCellsState());
-      tttView->determinWinner(gm.checkWinner());
-      tttView->setScore(gm.getScore());
+      auto cells = gm.getCellsState();
+      auto winner = gm.checkWinner();
+      auto score = gm.getScore();
+      vm.getCurrentView()->update(cells, winner, score);
     } else if (auto *difficultyView =
-                   dynamic_cast<DifficultyView *>(vm.getCurrentView())) {
+                   dynamic_cast<DifficultyView *>(currentView)) {
       int idx = 0;
       for (auto bounds : difficultyView->hoverableItems) {
 
@@ -80,11 +81,10 @@ void GameController::run() {
     vm.renderView();
     if (gm.computerTurn()) {
       gm.modifyCells(-1);
-      if (auto *tttView = dynamic_cast<TTTView *>(vm.getCurrentView())) {
-        tttView->setCells(gm.getCellsState());
-        tttView->determinWinner(gm.checkWinner());
-        tttView->setScore(gm.getScore());
-      }
+      auto cells = gm.getCellsState();
+      auto winner = gm.checkWinner();
+      auto score = gm.getScore();
+      vm.getCurrentView()->update(cells, winner, score);
     }
     vm.window.display();
   }

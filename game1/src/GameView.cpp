@@ -61,14 +61,22 @@ std::array<sf::Text, 2> scoreText(std::array<int, 2> score,
   std::array<sf::Text, 2> array = {headerText, scoreText};
   return array;
 }
+
+// view
 GameView::GameView()
     : window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "TicTacToe") {}
 void GameView::renderView() { window.draw(*currentView); }
-void GameView::setMode(Mode newMode) { gameMode = newMode; }
 void GameView::setView(std::unique_ptr<CurrentView> view) {
   currentView = std::move(view);
 }
 CurrentView *GameView::getCurrentView() { return currentView.get(); }
+// TTT view 3*3 grid
+void TTTView::update(const std::array<char, 9> &cells, const char &winner,
+                     const std::array<int, 2> &score) {
+  setCells(cells);
+  determinWinner(winner);
+  setScore(score);
+}
 void TTTView::resetGame() {
   gameOver = false;
   winner = emptyCellMark;
@@ -123,6 +131,7 @@ void TTTView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
     target.draw(text);
   }
 }
+// main menu to choose the game
 MenuView::MenuView() {
   hoverableItems.clear();
   for (int i = 0; i < mainMenuItemsContainers.size(); i++) {
@@ -154,14 +163,17 @@ void MenuView::draw(sf::RenderTarget &target, sf::RenderStates states) const {
     target.draw(*text);
   }
 }
+void MenuView::update(const std::array<char, 9> &cells, const char &winner,
+                      const std::array<int, 2> &score) {}
 
+// Computer Difficulties
 DifficultyView::DifficultyView() {
   hoverableItems.clear();
   for (int i = 0; i < dificultyMenuItemsContainers.size(); i++) {
     dificultyMenuItemsContainers[i].setSize({menuItemWidth, menuItemHeight});
     dificultyMenuItemsContainers[i].setPosition(
         {menuItemXOffset,
-         menuFirstItemYOffset + i * (menuItemHeight + menuItemSpacing)});
+         menuFirstItemYOffset + i * (menuItemHeight + 2 * menuItemSpacing)});
     dificultyMenuItemsContainers[i].setOutlineColor(sf::Color::Black);
     dificultyMenuItemsContainers[i].setOutlineThickness(BAR_THICKNESS);
 
@@ -174,7 +186,6 @@ DifficultyView::DifficultyView() {
         {dificultyMenuItemsContainers[i].getGlobalBounds()});
   }
 }
-
 void DifficultyView::draw(sf::RenderTarget &target,
                           sf::RenderStates states) const {
   sf::RenderWindow &window = static_cast<sf::RenderWindow &>(target);
@@ -190,3 +201,6 @@ void DifficultyView::draw(sf::RenderTarget &target,
     target.draw(*text);
   }
 }
+void DifficultyView::update(const std::array<char, 9> &cells,
+                            const char &winner,
+                            const std::array<int, 2> &score) {}
