@@ -2,16 +2,20 @@
 #include <array>
 #include <memory>
 #include <vector>
-// class GameStateObserver {
-// public:
-//   virtual void update() = 0;
-// };
-// class GameStateObservable {
-//   virtual void add(GameStateObserver obs) = 0;
-//   virtual void remove(GameStateObserver obs) = 0;
-//   virtual void notify() = 0;
-// };
-//
+class GameStateObserver {
+public:
+  virtual void update() = 0;
+  bool operator==(const GameStateObserver &other) const {
+    return this == &other;
+  };
+};
+class GameStateObservable {
+public:
+  virtual void addObserver(GameStateObserver *obs) = 0;
+  virtual void removeObserver(GameStateObserver *obs) = 0;
+  virtual void notifyObservers() = 0;
+};
+
 struct Line {
   int a, b, c;
 };
@@ -60,14 +64,14 @@ public:
 
 class AiPlayer {
   std::shared_ptr<std::array<char, 9>> cells;
-  AiPlayerStrategy *strategy = new NoPlayStrategy();
+  AiPlayerStrategy *strategy;
 
 public:
   AiPlayer(std::shared_ptr<std::array<char, 9>> arr);
   void setStrategy(AiPlayerStrategy *strategy);
   void play();
 };
-class GameModel {
+class GameModel : public GameStateObservable {
   std::shared_ptr<std::array<char, 9>> cells;
   char currentPlayer = Xmark;
   char computerPlayer = Omark; // stay fixed during rounds of VS_COMPUTER game
@@ -79,6 +83,7 @@ class GameModel {
 
 public:
   std::array<char, 9> getCellsState();
+  std::vector<GameStateObserver *> observers;
   void resetBoard();
   void resetScore();
   void modifyCells(int cellNumber);
@@ -92,4 +97,8 @@ public:
   bool is2player();
   bool isGame();
   bool computerTurn();
+  // observables methods
+  void removeObserver(GameStateObserver *obs) override;
+  void addObserver(GameStateObserver *obs) override;
+  void notifyObservers() override;
 };

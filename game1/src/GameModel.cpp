@@ -10,7 +10,19 @@
 GameModel::GameModel()
     : cells(std::make_shared<std::array<char, 9>>(initCells)),
       aiPlayer(AiPlayer(cells)) {}
+void GameModel::addObserver(GameStateObserver *obs) {
+  observers.push_back(obs);
+}
+void GameModel::removeObserver(GameStateObserver *obs) {
+  observers.erase(remove(observers.begin(), observers.end(), obs),
+                  observers.end());
+}
 
+void GameModel::notifyObservers() {
+  for (GameStateObserver *observer : observers) {
+    observer->update();
+  }
+}
 void GameModel::setPlayStrategy(AiPlayerStrategy *strategy) {
   aiPlayer.setStrategy(strategy);
 }
@@ -47,6 +59,7 @@ void GameModel::modifyCells(int cellNumber) {
       }
     }
   }
+  notifyObservers();
 };
 void GameModel::resetBoard() {
   rounds++;
@@ -57,6 +70,7 @@ void GameModel::resetBoard() {
   }
   orderOfMoves.clear();
   (*cells).fill(emptyCellMark);
+  notifyObservers();
 }
 
 char GameModel::checkWinner() {
@@ -73,6 +87,7 @@ char GameModel::checkWinner() {
     return Omark;
   }
   return emptyCellMark;
+  notifyObservers();
 }
 void GameModel::setGameMode(Mode newMode) { appMode = newMode; }
 void GameModel::resetScore() {
@@ -80,6 +95,7 @@ void GameModel::resetScore() {
   cells->fill(emptyCellMark);
   score.fill(0);
   currentPlayer = Xmark;
+  notifyObservers();
 }
 std::array<int, 2> GameModel::getScore() { return score; }
 bool GameModel::isGame() { return appMode != Mode::MENU; }

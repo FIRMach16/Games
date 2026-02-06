@@ -88,6 +88,9 @@ void TTTView::determinWinner(char mark) {
   if (mark != emptyCellMark) {
     gameOver = true;
     winner = mark;
+  } else {
+    gameOver = false;
+    winner = emptyCellMark;
   }
 }
 TTTView::TTTView(std::array<char, 9> &cells) : cells(cells) {

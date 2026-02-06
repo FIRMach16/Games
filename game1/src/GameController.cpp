@@ -28,10 +28,7 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
             gm.modifyCells(i);
         }
       }
-      auto cells = gm.getCellsState();
-      auto winner = gm.checkWinner();
-      auto score = gm.getScore();
-      vm.getCurrentView()->update(cells, winner, score);
+
     } else if (auto *difficultyView =
                    dynamic_cast<DifficultyView *>(currentView)) {
       int idx = 0;
@@ -67,7 +64,6 @@ void GameController::run() {
         if (auto *tempview = dynamic_cast<TTTView *>(vm.getCurrentView()))
           if (keyPressed->scancode == sf::Keyboard::Scancode::R) {
             gm.resetBoard();
-            tempview->resetGame();
           }
         if (keyPressed->scancode == sf::Keyboard::Scancode::M) {
           vm.setView(std::make_unique<MenuView>());
@@ -81,13 +77,16 @@ void GameController::run() {
     vm.renderView();
     if (gm.computerTurn()) {
       gm.modifyCells(-1);
-      auto cells = gm.getCellsState();
-      auto winner = gm.checkWinner();
-      auto score = gm.getScore();
-      vm.getCurrentView()->update(cells, winner, score);
     }
     vm.window.display();
   }
 }
-GameController::GameController(GameModel &gm, GameView &vm)
-    : gm(std::move(gm)), vm(std::move(vm)) {}
+void GameController::update() {
+  auto cells = gm.getCellsState();
+  auto winner = gm.checkWinner();
+  auto score = gm.getScore();
+  vm.getCurrentView()->update(cells, winner, score);
+}
+GameController::GameController(GameModel &gm, GameView &vm) : gm(gm), vm(vm) {
+  gm.addObserver(this);
+}
