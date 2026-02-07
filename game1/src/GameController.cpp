@@ -41,11 +41,11 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
           vm.setView(std::make_unique<TTTView>(cells));
           gm.resetScore();
           if (idx == 0)
-            gm.setPlayStrategy(new BeginnerAiStrategy());
+            gm.setPlayStrategy(std::make_unique<BeginnerAiStrategy>());
           else if (idx == 1)
-            gm.setPlayStrategy(new IntermediateAiStrategy());
+            gm.setPlayStrategy(std::make_unique<IntermediateAiStrategy>());
           else if (idx == 2)
-            gm.setPlayStrategy(new ExpertAiStrategy());
+            gm.setPlayStrategy(std::make_unique<ExpertAiStrategy>());
         }
         idx++;
       }
@@ -54,7 +54,6 @@ void handleMouseClick(GameView &vm, GameModel &gm) {
 }
 void GameController::run() {
   vm.setView(std::make_unique<MenuView>());
-  gm.setPlayStrategy(new ExpertAiStrategy());
   while (vm.window.isOpen()) {
     while (const std::optional event = vm.window.pollEvent()) {
       // "close requested" event: we close the window

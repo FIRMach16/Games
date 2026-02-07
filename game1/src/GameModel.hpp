@@ -64,11 +64,11 @@ public:
 
 class AiPlayer {
   std::shared_ptr<std::array<char, 9>> cells;
-  AiPlayerStrategy *strategy;
+  std::unique_ptr<AiPlayerStrategy> strategy;
 
 public:
   AiPlayer(std::shared_ptr<std::array<char, 9>> arr);
-  void setStrategy(AiPlayerStrategy *strategy);
+  void setStrategy(std::unique_ptr<AiPlayerStrategy> strategy);
   void play();
 };
 class GameModel : public GameStateObservable {
@@ -89,7 +89,7 @@ public:
   void modifyCells(int cellNumber);
   void setGameMode(Mode newMode);
   char checkWinner();
-  void setPlayStrategy(AiPlayerStrategy *strategy);
+  void setPlayStrategy(std::unique_ptr<AiPlayerStrategy> strategy);
   void setComputerPlayer(char newComputerPlayer);
   std::array<int, 2> getScore();
   GameModel();

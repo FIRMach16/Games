@@ -23,8 +23,8 @@ void GameModel::notifyObservers() {
     observer->update();
   }
 }
-void GameModel::setPlayStrategy(AiPlayerStrategy *strategy) {
-  aiPlayer.setStrategy(strategy);
+void GameModel::setPlayStrategy(std::unique_ptr<AiPlayerStrategy> strategy) {
+  aiPlayer.setStrategy(std::move(strategy));
 }
 std::array<char, 9> GameModel::getCellsState() { return (*cells); }
 void GameModel::modifyCells(int cellNumber) {
@@ -103,8 +103,8 @@ bool GameModel::is2player() { return appMode != Mode::VS_COMPUTER; }
 bool GameModel::computerTurn() {
   return (currentPlayer == computerPlayer && !is2player() && isGame());
 }
-void AiPlayer::setStrategy(AiPlayerStrategy *strategy) {
-  this->strategy = strategy;
+void AiPlayer::setStrategy(std::unique_ptr<AiPlayerStrategy> strategy) {
+  this->strategy = std::move(strategy);
 }
 AiPlayer::AiPlayer(std::shared_ptr<std::array<char, 9>> arr) : cells(arr) {}
 void AiPlayer::play() { strategy->play((*cells)); }
